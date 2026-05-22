@@ -5,11 +5,9 @@ import re
 import httpx
 from datetime import datetime, timezone, timedelta
 from collections import Counter
-from PIL import Image, ImageDraw, ImageFont
 
 GITHUB_USERNAME = "jyh20030112"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-ASSETS_DIR = pathlib.Path("assets")
 
 HEADERS = {
     "Accept": "application/vnd.github.v3+json",
@@ -27,11 +25,11 @@ TIME_PERIODS = {
 
 WEEKDAY_NAMES_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
-PERIOD_COLORS = {
-    "morning": "#FFB74D",
-    "afternoon": "#FF8A65",
-    "evening": "#9575CD",
-    "night": "#4FC3F7",
+PERIOD_EMOJI = {
+    "morning": "🌞",
+    "afternoon": "☀️",
+    "evening": "🌆",
+    "night": "🌙",
 }
 
 PERIOD_LABELS = {
@@ -43,109 +41,49 @@ PERIOD_LABELS = {
 
 PERIOD_ORDER = ["morning", "afternoon", "evening", "night"]
 
+DAY_EMOJI = ["🐔", "🐱", "🐶", "🐮", "🐯", "🐰", "🐲"]
+
 DAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
-DAY_COLORS = [
-    "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF",
-    "#9B59B6", "#FF8C42", "#36C9C6",
-]
 
-LANG_COLORS = [
-    "#3572A5", "#DA5B0B", "#E34C26", "#563D7C", "#2B7489",
-    "#F7DF1E", "#41B883", "#DE3423", "#F18E33", "#178600",
-    "#555555", "#438EFF", "#FF6F00", "#FFD43B", "#3776AB",
-]
-
-W = 800
-PAD_LEFT = 155
-PAD_RIGHT = 20
-BAR_AREA_MAX = W - PAD_LEFT - PAD_RIGHT
-
-TITLE_Y = 18
-FIRST_BAR_Y = 68
-ROW_H = 50
-BAR_H = 28
-BAR_Y_OFF = 14
-
-IMG_BG = (13, 17, 23)
-TITLE_RGB = (88, 166, 255)
-LABEL_RGB = (230, 237, 243)
-TEXT_RGB = (201, 209, 217)
+def _visual_width(s):
+    w = 0
+    for ch in str(s):
+        if '\u4e00' <= ch <= '\u9fff' or '\u3000' <= ch <= '\u303f' or '\uff00' <= ch <= '\uffef':
+            w += 2
+        elif ord(ch) > 127:
+            w += 2
+        else:
+            w += 1
+    return w
 
 
-def _hex_to_rgb(h):
-    h = h.lstrip("#")
-    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+def _pad_visual(s, target_width):
+    cur = _visual_width(s)
+    if cur >= target_width:
+        return s + " "
+    return s + " " * (target_width - cur)
 
 
-def _find_font():
-    system = __import__("platform").system()
-    candidates = []
-    if system == "Darwin":
-        candidates = [
-            "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/Fonts/STHeiti Light.ttc",
-            "/System/Library/Fonts/STHeiti Medium.ttc",
-            "/Library/Fonts/Arial Unicode.ttf",
-        ]
-    elif system == "Linux":
-        candidates = [
-            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
-        ]
-    else:
-        candidates = [
-            "C:/Windows/Fonts/msyh.ttc",
-            "C:/Windows/Fonts/simhei.ttf",
-        ]
+def _make_text_bar(items, total, bar_width=25):
+    label_w = max(_visual_width(label) for label, _ in items) + 2
+    val_w = 12
 
-    for fp in candidates:
-        try:
-            return ImageFont.truetype(fp, 15), ImageFont.truetype(fp, 17, encoding="unic")
-        except Exception:
-            continue
+    lines = []
+    for label, value in items:
+        pct = (value / total * 100) if total > 0 else 0.0
+        filled = int(bar_width * value / total) if total > 0 else 0
+        empty = bar_width - filled
+        bar = "█" * filled + "░" * empty
+        val_str = f"{int(value)}次 Push".rjust(10)
+        pct_str = f"{pct:5.1f} %"
 
-    return ImageFont.load_default(), ImageFont.load_default()
+        label_part = _pad_visual(label, label_w)
+        val_part = _pad_visual(val_str, val_w)
+        lines.append(f"{label_part} {val_part} {bar}  {pct_str}")
 
-
-FONT_SMALL, FONT_TITLE = _find_font()
-print(f"Font loaded")
-
-
-def _make_chart(title, items, total):
-    n = len(items)
-    h = FIRST_BAR_Y + n * ROW_H + 10
-    img = Image.new("RGBA", (W, h), IMG_BG)
-    draw = ImageDraw.Draw(img)
-
-    draw.text((20, TITLE_Y), title, fill=TITLE_RGB, font=FONT_TITLE)
-
-    for i, (label, value, color_hex) in enumerate(items):
-        y = FIRST_BAR_Y + i * ROW_H
-        pct = (value / total * 100) if total > 0 else 0
-        bar_w = max(int(BAR_AREA_MAX * value / total), 0) if total > 0 else 0
-
-        draw.text((10, y + 2), label, fill=LABEL_RGB, font=FONT_SMALL)
-
-        if bar_w > 0:
-            rgb = _hex_to_rgb(color_hex)
-            draw.rounded_rectangle(
-                (PAD_LEFT, y + BAR_Y_OFF, PAD_LEFT + bar_w, y + BAR_Y_OFF + BAR_H),
-                radius=4, fill=rgb,
-            )
-
-        label_str = f"{int(value)}次 Push    {pct:.1f}%"
-        tx = PAD_LEFT + bar_w + 8 if bar_w < 300 else PAD_LEFT + 8
-        bbox = draw.textbbox((0, 0), label_str, font=FONT_SMALL)
-        tw = bbox[2] - bbox[0]
-        if tx + tw > W - 6:
-            tx = W - tw - 6
-        draw.text((tx, y + 2), label_str, fill=TEXT_RGB, font=FONT_SMALL)
-
-    return img
+    chart = "\n".join(lines)
+    return f"```text\n{chart}\n```"
 
 
 def fetch_events():
@@ -185,44 +123,35 @@ def fetch_repo_languages(repo_name):
 
 
 def create_time_distribution_chart(period_counter):
-    total = sum(period_counter.values())
-    if total == 0:
-        total = 1
-    items = [(PERIOD_LABELS[p], period_counter.get(p, 0), PERIOD_COLORS[p]) for p in PERIOD_ORDER]
-    img = _make_chart("Push 时间段分布", items, total)
-    img.save(ASSETS_DIR / "time_distribution.png")
-    print(f"Time distribution saved: {dict(period_counter)}")
+    total = max(sum(period_counter.values()), 1)
+    items = [
+        (f"{PERIOD_EMOJI[p]} {PERIOD_LABELS[p]}", period_counter.get(p, 0))
+        for p in PERIOD_ORDER
+    ]
+    return _make_text_bar(items, total)
 
 
 def create_weekday_chart(day_counter):
-    total = sum(day_counter.values())
-    if total == 0:
-        total = 1
-    items = [(DAY_LABELS[i], day_counter.get(i, 0), DAY_COLORS[i]) for i in range(7)]
-    img = _make_chart("星期几最活跃", items, total)
-    img.save(ASSETS_DIR / "weekday_distribution.png")
-    print(f"Weekday distribution saved: {dict(day_counter)}")
+    total = max(sum(day_counter.values()), 1)
+    items = [
+        (f"{DAY_EMOJI[i]} {DAY_LABELS[i]}", day_counter.get(i, 0))
+        for i in range(7)
+    ]
+    return _make_text_bar(items, total)
 
 
 def create_language_chart(lang_counter):
     if not lang_counter:
-        h = 120
-        img = Image.new("RGBA", (W, h), IMG_BG)
-        draw = ImageDraw.Draw(img)
-        draw.text((20, TITLE_Y), "编程语言分布", fill=TITLE_RGB, font=FONT_TITLE)
-        draw.text((W // 2, 72), "暂无数据", fill=TEXT_RGB, font=FONT_SMALL, anchor="mt")
-        img.save(ASSETS_DIR / "language_distribution.png")
-        return
+        return "暂无数据"
 
     sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)[:10]
     total = sum(v for _, v in sorted_langs)
-    items = [(lang, count, LANG_COLORS[i % len(LANG_COLORS)]) for i, (lang, count) in enumerate(sorted_langs)]
-    img = _make_chart("编程语言分布", items, total)
-    img.save(ASSETS_DIR / "language_distribution.png")
-    print(f"Language distribution saved: {dict(lang_counter)}")
+    items = [(f"💻 {lang}", count) for lang, count in sorted_langs]
+    return _make_text_bar(items, total)
 
 
-def generate_readme(period_counter, day_counter, lang_counter, total_pushes):
+def generate_readme(period_counter, day_counter, lang_counter, total_pushes,
+                     period_chart, weekday_chart, lang_chart):
     total = sum(period_counter.values())
     peak_period = max(period_counter, key=period_counter.get) if total > 0 else "暂无"
     peak_period_cn = {
@@ -254,50 +183,46 @@ def generate_readme(period_counter, day_counter, lang_counter, total_pushes):
 ---
 
 ### 🕐 Push 时间段分布
-<p align="center">
-  <img src="./assets/time_distribution.png" alt="时间段分布" width="520"/>
-</p>
+
+{period_chart}
 
 ### 📆 星期几最活跃
-<p align="center">
-  <img src="./assets/weekday_distribution.png" alt="星期分布" width="600"/>
-</p>
+
+{weekday_chart}
 
 ### 💻 编程语言分布
-<p align="center">
-  <img src="./assets/language_distribution.png" alt="语言分布" width="520"/>
-</p>
+
+{lang_chart}
 
 ---
 
 <details>
 <summary>🤖 关于这些统计</summary>
 <br>
-这些图表通过 GitHub Actions 自动生成，每天定时更新。统计基于我最近的公开 Push 事件。
+
+这些数据由 GitHub Actions 每 6 小时自动更新。
+统计基于我最近的公开 Push 事件，
+通过 Unicode 文本条形图直接渲染，无需加载外部图片。
+
 </details>
 """
     return readme
 
 
 def main():
-    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
-
     print("=" * 50)
     print("  GitHub Profile Stats Generator")
     print("=" * 50)
 
-    print("\n[1/4] 获取 Push 事件...")
+    print("\n[1/3] 获取 Push 事件...")
     events = fetch_events()
-
-    if not events:
-        print("No push events found, generating empty charts...")
 
     period_counter = Counter()
     day_counter = Counter()
     lang_counter = Counter()
     repo_lang_cache = {}
 
-    print(f"\n[2/4] 分析 {len(events)} 个 Push 事件...")
+    print(f"\n[2/3] 分析 {len(events)} 个 Push 事件...")
     for i, event in enumerate(events):
         created_at = event.get("created_at")
         if not created_at:
@@ -327,19 +252,22 @@ def main():
     total_pushes = len(events)
     print(f"\n  分析完成! 总计 {total_pushes} 次 Push")
 
-    print("\n[3/4] 生成图表...")
-    create_time_distribution_chart(period_counter)
-    create_weekday_chart(day_counter)
-    create_language_chart(lang_counter)
+    print("\n[3/3] 生成 README.md...")
+    period_chart = create_time_distribution_chart(period_counter)
+    weekday_chart = create_weekday_chart(day_counter)
+    lang_chart = create_language_chart(lang_counter)
 
-    print("\n[4/4] 更新 README.md...")
-    readme_content = generate_readme(period_counter, day_counter, lang_counter, total_pushes)
+    readme_content = generate_readme(
+        period_counter, day_counter, lang_counter,
+        total_pushes, period_chart, weekday_chart, lang_chart,
+    )
+
     readme_path = pathlib.Path("README.md")
     readme_path.write_text(readme_content, encoding="utf-8")
     print("  README.md 已更新!")
 
     print("\n" + "=" * 50)
-    print("  完成! 所有图表已生成。")
+    print("  完成!  README 已包含文本柱状图。")
     print("=" * 50)
 
 
