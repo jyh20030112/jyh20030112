@@ -237,7 +237,7 @@ def generate_readme(period_counter, day_counter, lang_counter, total_pushes):
 
     peak_lang = max(lang_counter, key=lang_counter.get) if lang_counter else "暂无"
 
-    readme = f"""# 👋 嗨，我是 jyh20030112
+    readme = f"""# 👋 嗨，我是 蛋烧肉粽
 
 > 📊 以下数据由 GitHub Actions 自动更新 | 最后更新: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
 
