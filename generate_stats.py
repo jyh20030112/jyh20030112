@@ -1,18 +1,15 @@
-import os
 import json
-import platform
-import requests
+import os
+import pathlib
+import re
+import httpx
 from datetime import datetime, timezone, timedelta
-from collections import Counter, defaultdict
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-import numpy as np
+from collections import Counter
+from PIL import Image, ImageDraw, ImageFont
 
 GITHUB_USERNAME = "jyh20030112"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-ASSETS_DIR = "assets"
+ASSETS_DIR = pathlib.Path("assets")
 
 HEADERS = {
     "Accept": "application/vnd.github.v3+json",
@@ -29,7 +26,6 @@ TIME_PERIODS = {
 }
 
 WEEKDAY_NAMES_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-WEEKDAY_NAMES_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 PERIOD_COLORS = {
     "morning": "#FFB74D",
@@ -60,45 +56,109 @@ LANG_COLORS = [
     "#555555", "#438EFF", "#FF6F00", "#FFD43B", "#3776AB",
 ]
 
+W = 800
+PAD_LEFT = 155
+PAD_RIGHT = 20
+BAR_AREA_MAX = W - PAD_LEFT - PAD_RIGHT
 
-def setup_cjk_font():
-    system = platform.system()
+TITLE_Y = 18
+FIRST_BAR_Y = 68
+ROW_H = 50
+BAR_H = 28
+BAR_Y_OFF = 14
+
+IMG_BG = (13, 17, 23)
+TITLE_RGB = (88, 166, 255)
+LABEL_RGB = (230, 237, 243)
+TEXT_RGB = (201, 209, 217)
+
+
+def _hex_to_rgb(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+
+def _find_font():
+    system = __import__("platform").system()
+    candidates = []
     if system == "Darwin":
-        candidates = ["PingFang SC", "Heiti SC", "STHeiti", "Apple SD Gothic Neo"]
+        candidates = [
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/STHeiti Light.ttc",
+            "/System/Library/Fonts/STHeiti Medium.ttc",
+            "/Library/Fonts/Arial Unicode.ttf",
+        ]
     elif system == "Linux":
         candidates = [
-            "WenQuanYi Micro Hei", "WenQuanYi Zen Hei",
-            "Noto Sans CJK SC", "Noto Sans SC",
-            "Droid Sans Fallback", "DejaVu Sans",
+            "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+            "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
         ]
     else:
-        candidates = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+        candidates = [
+            "C:/Windows/Fonts/msyh.ttc",
+            "C:/Windows/Fonts/simhei.ttf",
+        ]
 
-    for font_name in candidates:
-        for f in fm.fontManager.ttflist:
-            if font_name.lower() in f.name.lower():
-                plt.rcParams["font.family"] = f.name
-                print(f"Using font: {f.name}")
-                return
+    for fp in candidates:
+        try:
+            return ImageFont.truetype(fp, 15), ImageFont.truetype(fp, 17, encoding="unic")
+        except Exception:
+            continue
 
-    plt.rcParams["font.family"] = "sans-serif"
-    print("Warning: No CJK font found, Chinese characters may not render")
+    return ImageFont.load_default(), ImageFont.load_default()
 
 
-setup_cjk_font()
+FONT_SMALL, FONT_TITLE = _find_font()
+print(f"Font loaded")
+
+
+def _make_chart(title, items, total):
+    n = len(items)
+    h = FIRST_BAR_Y + n * ROW_H + 10
+    img = Image.new("RGBA", (W, h), IMG_BG)
+    draw = ImageDraw.Draw(img)
+
+    draw.text((20, TITLE_Y), title, fill=TITLE_RGB, font=FONT_TITLE)
+
+    for i, (label, value, color_hex) in enumerate(items):
+        y = FIRST_BAR_Y + i * ROW_H
+        pct = (value / total * 100) if total > 0 else 0
+        bar_w = max(int(BAR_AREA_MAX * value / total), 0) if total > 0 else 0
+
+        draw.text((10, y + 2), label, fill=LABEL_RGB, font=FONT_SMALL)
+
+        if bar_w > 0:
+            rgb = _hex_to_rgb(color_hex)
+            draw.rounded_rectangle(
+                (PAD_LEFT, y + BAR_Y_OFF, PAD_LEFT + bar_w, y + BAR_Y_OFF + BAR_H),
+                radius=4, fill=rgb,
+            )
+
+        label_str = f"{int(value)}次 Push    {pct:.1f}%"
+        tx = PAD_LEFT + bar_w + 8 if bar_w < 300 else PAD_LEFT + 8
+        bbox = draw.textbbox((0, 0), label_str, font=FONT_SMALL)
+        tw = bbox[2] - bbox[0]
+        if tx + tw > W - 6:
+            tx = W - tw - 6
+        draw.text((tx, y + 2), label_str, fill=TEXT_RGB, font=FONT_SMALL)
+
+    return img
 
 
 def fetch_events():
     events = []
     for page in range(1, 6):
         url = f"https://api.github.com/users/{GITHUB_USERNAME}/events?per_page=100&page={page}"
-        resp = requests.get(url, headers=HEADERS, timeout=30)
+        resp = httpx.get(url, headers=HEADERS, timeout=30.0)
         if resp.status_code != 200:
             break
         data = resp.json()
         if not data:
             break
-        push_events = [e for e in data if e["type"] == "PushEvent"]
+        push_events = [e for e in data if e.get("type") == "PushEvent"]
         events.extend(push_events)
         if len(data) < 100:
             break
@@ -115,175 +175,50 @@ def classify_time_period(hour):
 
 def fetch_repo_languages(repo_name):
     url = f"https://api.github.com/repos/{repo_name}/languages"
-    resp = requests.get(url, headers=HEADERS, timeout=30)
+    resp = httpx.get(url, headers=HEADERS, timeout=30.0)
     if resp.status_code == 200:
         data = resp.json()
         if data:
-            total = sum(data.values())
             primary_lang = max(data, key=data.get)
             return primary_lang, data
     return "Unknown", {}
 
 
 def create_time_distribution_chart(period_counter):
-    order = PERIOD_ORDER
-    values = np.array([period_counter.get(p, 0) for p in order], dtype=float)
-    total = values.sum()
-
+    total = sum(period_counter.values())
     if total == 0:
-        values = np.array([1, 1, 1, 1], dtype=float)
-        total = 4
-
-    pcts = values / total * 100
-    colors = [PERIOD_COLORS[p] for p in order]
-    labels = [PERIOD_LABELS[p] for p in order]
-
-    bar_height = 0.55
-    n = len(order)
-    fig_height = max(n * 0.7 + 1.2, 3.8)
-    fig, ax = plt.subplots(figsize=(9, fig_height), facecolor="#0D1117")
-    ax.set_facecolor("#0D1117")
-
-    y_pos = list(range(n))[::-1]
-    bars = ax.barh(y_pos, values, height=bar_height, color=colors, edgecolor="#21262D", linewidth=0.8)
-    ax.set_ylim(-0.6, n - 0.4)
-
-    if not (total == 4 and sum(period_counter.values()) == 0):
-        for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
-            label_text = f" {int(v)}次 Push   {pct:.1f}%"
-            ax.text(
-                v + total * 0.005, y_pos[i], label_text,
-                va="center", color="#C9D1D9", fontsize=11,
-            )
-
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
-    ax.set_xlim(0, total * 1.32)
-
-    ax.set_title("Push 时间段分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E", left=False)
-    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
-    ax.set_axisbelow(True)
-    ax.set_xticks([])
-
-    fig.tight_layout()
-    fig.savefig(f"{ASSETS_DIR}/time_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
-    plt.close(fig)
+        total = 1
+    items = [(PERIOD_LABELS[p], period_counter.get(p, 0), PERIOD_COLORS[p]) for p in PERIOD_ORDER]
+    img = _make_chart("Push 时间段分布", items, total)
+    img.save(ASSETS_DIR / "time_distribution.png")
     print(f"Time distribution saved: {dict(period_counter)}")
 
 
 def create_weekday_chart(day_counter):
-    days = list(range(7))
-    values = np.array([day_counter.get(d, 0) for d in days], dtype=float)
-    total = values.sum()
-
+    total = sum(day_counter.values())
     if total == 0:
-        values = np.array([1] * 7, dtype=float)
-        total = 7
-
-    pcts = values / total * 100
-    labels = DAY_LABELS
-
-    bar_height = 0.55
-    n = 7
-    fig_height = max(n * 0.7 + 1.2, 5.0)
-    fig, ax = plt.subplots(figsize=(9, fig_height), facecolor="#0D1117")
-    ax.set_facecolor("#0D1117")
-
-    y_pos = list(range(n))[::-1]
-    bars = ax.barh(y_pos, values, height=bar_height, color=DAY_COLORS, edgecolor="#21262D", linewidth=0.8)
-    ax.set_ylim(-0.6, n - 0.4)
-
-    if not (total == 7 and sum(day_counter.values()) == 0):
-        for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
-            label_text = f" {int(v)}次 Push   {pct:.1f}%"
-            ax.text(
-                v + total * 0.005, y_pos[i], label_text,
-                va="center", color="#C9D1D9", fontsize=11,
-            )
-
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
-    ax.set_xlim(0, total * 1.32)
-
-    ax.set_title("星期几最活跃", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E", left=False)
-    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
-    ax.set_axisbelow(True)
-    ax.set_xticks([])
-
-    fig.tight_layout()
-    fig.savefig(f"{ASSETS_DIR}/weekday_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
-    plt.close(fig)
+        total = 1
+    items = [(DAY_LABELS[i], day_counter.get(i, 0), DAY_COLORS[i]) for i in range(7)]
+    img = _make_chart("星期几最活跃", items, total)
+    img.save(ASSETS_DIR / "weekday_distribution.png")
     print(f"Weekday distribution saved: {dict(day_counter)}")
 
 
 def create_language_chart(lang_counter):
-    fig, ax = plt.subplots(figsize=(9, 3.5), facecolor="#0D1117")
-    ax.set_facecolor("#0D1117")
-
     if not lang_counter:
-        ax.text(0.5, 0.5, "暂无数据", ha="center", va="center",
-                color="#8B949E", fontsize=14, transform=ax.transAxes)
-        ax.set_title("编程语言分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
-        fig.tight_layout()
-        fig.savefig(f"{ASSETS_DIR}/language_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
-        plt.close(fig)
+        h = 120
+        img = Image.new("RGBA", (W, h), IMG_BG)
+        draw = ImageDraw.Draw(img)
+        draw.text((20, TITLE_Y), "编程语言分布", fill=TITLE_RGB, font=FONT_TITLE)
+        draw.text((W // 2, 72), "暂无数据", fill=TEXT_RGB, font=FONT_SMALL, anchor="mt")
+        img.save(ASSETS_DIR / "language_distribution.png")
         return
 
-    sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)
-    top_langs = sorted_langs[:10]
-
-    labels = [lang for lang, _ in top_langs]
-    values = np.array([count for _, count in top_langs], dtype=float)
-    total = values.sum()
-    pcts = values / total * 100
-    colors = LANG_COLORS[:len(labels)]
-
-    n = len(labels)
-    bar_height = 0.55
-    fig_height = max(n * 0.7 + 1.2, 3.5)
-    fig.set_size_inches(9, fig_height)
-
-    y_pos = list(range(n))[::-1]
-    bars = ax.barh(y_pos, values, height=bar_height, color=colors, edgecolor="#21262D", linewidth=0.8)
-    ax.set_ylim(-0.6, n - 0.4)
-
-    for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
-        label_text = f" {int(v)}次 Push   {pct:.1f}%"
-        ax.text(
-            v + total * 0.005, y_pos[i], label_text,
-            va="center", color="#C9D1D9", fontsize=11,
-        )
-
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
-    ax.set_xlim(0, total * 1.32)
-
-    ax.set_title("编程语言分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
-
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E", left=False)
-    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
-    ax.set_axisbelow(True)
-    ax.set_xticks([])
-
-    fig.tight_layout()
-    fig.savefig(f"{ASSETS_DIR}/language_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
-    plt.close(fig)
+    sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)[:10]
+    total = sum(v for _, v in sorted_langs)
+    items = [(lang, count, LANG_COLORS[i % len(LANG_COLORS)]) for i, (lang, count) in enumerate(sorted_langs)]
+    img = _make_chart("编程语言分布", items, total)
+    img.save(ASSETS_DIR / "language_distribution.png")
     print(f"Language distribution saved: {dict(lang_counter)}")
 
 
@@ -345,7 +280,7 @@ def generate_readme(period_counter, day_counter, lang_counter, total_pushes):
 
 
 def main():
-    os.makedirs(ASSETS_DIR, exist_ok=True)
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 
     print("=" * 50)
     print("  GitHub Profile Stats Generator")
@@ -399,8 +334,8 @@ def main():
 
     print("\n[4/4] 更新 README.md...")
     readme_content = generate_readme(period_counter, day_counter, lang_counter, total_pushes)
-    with open("README.md", "w", encoding="utf-8") as f:
-        f.write(readme_content)
+    readme_path = pathlib.Path("README.md")
+    readme_path.write_text(readme_content, encoding="utf-8")
     print("  README.md 已更新!")
 
     print("\n" + "=" * 50)
