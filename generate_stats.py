@@ -27,7 +27,7 @@ WEEKDAY_NAMES_CN = ["周一", "周二", "周三", "周四", "周五", "周六", 
 
 PERIOD_EMOJI = {
     "morning": "🌞",
-    "afternoon": "☀️",
+    "afternoon": "☀",
     "evening": "🌆",
     "night": "🌙",
 }
@@ -46,9 +46,16 @@ DAY_EMOJI = ["🐔", "🐱", "🐶", "🐮", "🐯", "🐰", "🐲"]
 DAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 
+ZERO_WIDTH_CHARS = {
+    "\ufe0f", "\ufe0e",
+}
+
+
 def _visual_width(s):
     w = 0
     for ch in str(s):
+        if ch in ZERO_WIDTH_CHARS:
+            continue
         if '\u4e00' <= ch <= '\u9fff' or '\u3000' <= ch <= '\u303f' or '\uff00' <= ch <= '\uffef':
             w += 2
         elif ord(ch) > 127:
