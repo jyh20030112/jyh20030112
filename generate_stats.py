@@ -27,8 +27,8 @@ WEEKDAY_NAMES_CN = ["周一", "周二", "周三", "周四", "周五", "周六", 
 
 PERIOD_EMOJI = {
     "morning": "🌞",
-    "afternoon": "☀",
-    "evening": "🌆",
+    "afternoon": "🌆",
+    "evening": "🌃",
     "night": "🌙",
 }
 
