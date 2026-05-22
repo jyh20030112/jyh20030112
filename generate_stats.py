@@ -38,6 +38,17 @@ PERIOD_COLORS = {
     "night": "#4FC3F7",
 }
 
+PERIOD_LABELS = {
+    "morning": "上午 (06-12)",
+    "afternoon": "下午 (12-18)",
+    "evening": "傍晚 (18-24)",
+    "night": "深夜 (00-06)",
+}
+
+PERIOD_ORDER = ["morning", "afternoon", "evening", "night"]
+
+DAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+
 DAY_COLORS = [
     "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF",
     "#9B59B6", "#FF8C42", "#36C9C6",
@@ -115,45 +126,50 @@ def fetch_repo_languages(repo_name):
 
 
 def create_time_distribution_chart(period_counter):
-    fig, ax = plt.subplots(figsize=(7, 4.5), facecolor="#0D1117")
+    order = PERIOD_ORDER
+    values = np.array([period_counter.get(p, 0) for p in order], dtype=float)
+    total = values.sum()
+
+    if total == 0:
+        values = np.array([1, 1, 1, 1], dtype=float)
+        total = 4
+
+    pcts = values / total * 100
+    colors = [PERIOD_COLORS[p] for p in order]
+    labels = [PERIOD_LABELS[p] for p in order]
+
+    bar_height = 0.55
+    n = len(order)
+    fig_height = max(n * 0.7 + 1.2, 3.8)
+    fig, ax = plt.subplots(figsize=(9, fig_height), facecolor="#0D1117")
     ax.set_facecolor("#0D1117")
 
-    order = ["morning", "afternoon", "evening", "night"]
-    labels_cn = ["上午 6-12", "下午 12-18", "傍晚 18-24", "深夜 0-6"]
-    values = [period_counter.get(p, 0) for p in order]
-    colors = [PERIOD_COLORS[p] for p in order]
+    y_pos = list(range(n))[::-1]
+    bars = ax.barh(y_pos, values, height=bar_height, color=colors, edgecolor="#21262D", linewidth=0.8)
+    ax.set_ylim(-0.6, n - 0.4)
 
-    bars = ax.bar(range(len(order)), values, color=colors, edgecolor="#30363D", linewidth=0.5, width=0.6)
+    if not (total == 4 and sum(period_counter.values()) == 0):
+        for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
+            label_text = f" {int(v)}次 Push   {pct:.1f}%"
+            ax.text(
+                v + total * 0.005, y_pos[i], label_text,
+                va="center", color="#C9D1D9", fontsize=11,
+            )
 
-    all_zero = max(values) == 0
-    max_val = max(values) if not all_zero else 1
-    if not all_zero:
-        for bar, val in zip(bars, values):
-            if val > 0:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + max_val * 0.02,
-                    str(val),
-                    ha="center",
-                    va="bottom",
-                    color="#C9D1D9",
-                    fontsize=10,
-                    fontweight="bold",
-                )
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
+    ax.set_xlim(0, total * 1.32)
 
-    ax.set_xticks(range(len(order)))
-    ax.set_xticklabels(labels_cn, color="#C9D1D9", fontsize=11)
-    ax.set_ylabel("Push 次数", color="#8B949E", fontsize=11)
-    ax.set_title("� Push 时间段分布", color="#58A6FF", fontsize=16, fontweight="bold", pad=12)
+    ax.set_title("Push 时间段分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("#30363D")
+    ax.spines["left"].set_visible(False)
     ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E")
-    ax.yaxis.grid(True, color="#30363D", linewidth=0.5, alpha=0.5)
+    ax.tick_params(colors="#8B949E", left=False)
+    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, max(max_val * 1.2, 1.5))
+    ax.set_xticks([])
 
     fig.tight_layout()
     fig.savefig(f"{ASSETS_DIR}/time_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
@@ -162,44 +178,49 @@ def create_time_distribution_chart(period_counter):
 
 
 def create_weekday_chart(day_counter):
-    fig, ax = plt.subplots(figsize=(8, 4.5), facecolor="#0D1117")
+    days = list(range(7))
+    values = np.array([day_counter.get(d, 0) for d in days], dtype=float)
+    total = values.sum()
+
+    if total == 0:
+        values = np.array([1] * 7, dtype=float)
+        total = 7
+
+    pcts = values / total * 100
+    labels = DAY_LABELS
+
+    bar_height = 0.55
+    n = 7
+    fig_height = max(n * 0.7 + 1.2, 5.0)
+    fig, ax = plt.subplots(figsize=(9, fig_height), facecolor="#0D1117")
     ax.set_facecolor("#0D1117")
 
-    days = list(range(7))
-    values = [day_counter.get(d, 0) for d in days]
-    colors = DAY_COLORS
+    y_pos = list(range(n))[::-1]
+    bars = ax.barh(y_pos, values, height=bar_height, color=DAY_COLORS, edgecolor="#21262D", linewidth=0.8)
+    ax.set_ylim(-0.6, n - 0.4)
 
-    bars = ax.bar(days, values, color=colors, edgecolor="#30363D", linewidth=0.5, width=0.65)
+    if not (total == 7 and sum(day_counter.values()) == 0):
+        for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
+            label_text = f" {int(v)}次 Push   {pct:.1f}%"
+            ax.text(
+                v + total * 0.005, y_pos[i], label_text,
+                va="center", color="#C9D1D9", fontsize=11,
+            )
 
-    all_zero = max(values) == 0
-    max_val = max(values) if not all_zero else 1
-    if not all_zero:
-        for bar, val in zip(bars, values):
-            if val > 0:
-                ax.text(
-                    bar.get_x() + bar.get_width() / 2,
-                    bar.get_height() + max_val * 0.02,
-                    str(val),
-                    ha="center",
-                    va="bottom",
-                    color="#C9D1D9",
-                    fontsize=10,
-                    fontweight="bold",
-                )
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
+    ax.set_xlim(0, total * 1.32)
 
-    ax.set_xticks(days)
-    ax.set_xticklabels(WEEKDAY_NAMES_CN, color="#C9D1D9", fontsize=11)
-    ax.set_ylabel("Push 次数", color="#8B949E", fontsize=11)
-    ax.set_title("📆 星期几最活跃？", color="#58A6FF", fontsize=16, fontweight="bold", pad=12)
+    ax.set_title("星期几最活跃", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("#30363D")
+    ax.spines["left"].set_visible(False)
     ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E")
-    ax.yaxis.grid(True, color="#30363D", linewidth=0.5, alpha=0.5)
+    ax.tick_params(colors="#8B949E", left=False)
+    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, max(max_val * 1.2, 1.5))
+    ax.set_xticks([])
 
     fig.tight_layout()
     fig.savefig(f"{ASSETS_DIR}/weekday_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
@@ -208,12 +229,13 @@ def create_weekday_chart(day_counter):
 
 
 def create_language_chart(lang_counter):
-    fig, ax = plt.subplots(figsize=(8, 4.5), facecolor="#0D1117")
+    fig, ax = plt.subplots(figsize=(9, 3.5), facecolor="#0D1117")
     ax.set_facecolor("#0D1117")
 
     if not lang_counter:
-        ax.text(0.5, 0.5, "暂无数据", ha="center", va="center", color="#8B949E", fontsize=14, transform=ax.transAxes)
-        ax.set_title("💻 编程语言分布", color="#58A6FF", fontsize=16, fontweight="bold", pad=12)
+        ax.text(0.5, 0.5, "暂无数据", ha="center", va="center",
+                color="#8B949E", fontsize=14, transform=ax.transAxes)
+        ax.set_title("编程语言分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
         fig.tight_layout()
         fig.savefig(f"{ASSETS_DIR}/language_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
         plt.close(fig)
@@ -223,39 +245,41 @@ def create_language_chart(lang_counter):
     top_langs = sorted_langs[:10]
 
     labels = [lang for lang, _ in top_langs]
-    values = [count for _, count in top_langs]
-    colors = LANG_COLORS[: len(labels)]
+    values = np.array([count for _, count in top_langs], dtype=float)
+    total = values.sum()
+    pcts = values / total * 100
+    colors = LANG_COLORS[:len(labels)]
 
-    x_pos = range(len(labels))
-    bars = ax.bar(x_pos, values, color=colors, edgecolor="#30363D", linewidth=0.5, width=0.6)
+    n = len(labels)
+    bar_height = 0.55
+    fig_height = max(n * 0.7 + 1.2, 3.5)
+    fig.set_size_inches(9, fig_height)
 
-    max_val = max(values) if values else 1
-    for bar, val in zip(bars, values):
-        if val > 0:
-            ax.text(
-                bar.get_x() + bar.get_width() / 2,
-                bar.get_height() + max_val * 0.02,
-                str(val),
-                ha="center",
-                va="bottom",
-                color="#C9D1D9",
-                fontsize=10,
-                fontweight="bold",
-            )
+    y_pos = list(range(n))[::-1]
+    bars = ax.barh(y_pos, values, height=bar_height, color=colors, edgecolor="#21262D", linewidth=0.8)
+    ax.set_ylim(-0.6, n - 0.4)
 
-    ax.set_xticks(list(x_pos))
-    ax.set_xticklabels(labels, color="#C9D1D9", fontsize=11, rotation=30, ha="right")
-    ax.set_ylabel("Push 次数", color="#8B949E", fontsize=11)
-    ax.set_title("💻 编程语言分布", color="#58A6FF", fontsize=16, fontweight="bold", pad=12)
+    for i, (bar, v, pct) in enumerate(zip(bars, values, pcts)):
+        label_text = f" {int(v)}次 Push   {pct:.1f}%"
+        ax.text(
+            v + total * 0.005, y_pos[i], label_text,
+            va="center", color="#C9D1D9", fontsize=11,
+        )
+
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(labels, fontsize=12, color="#E6EDF3")
+    ax.set_xlim(0, total * 1.32)
+
+    ax.set_title("编程语言分布", color="#58A6FF", fontsize=15, fontweight="bold", pad=14)
 
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_color("#30363D")
+    ax.spines["left"].set_visible(False)
     ax.spines["bottom"].set_color("#30363D")
-    ax.tick_params(colors="#8B949E")
-    ax.yaxis.grid(True, color="#30363D", linewidth=0.5, alpha=0.5)
+    ax.tick_params(colors="#8B949E", left=False)
+    ax.xaxis.grid(True, color="#21262D", linewidth=0.5, alpha=0.6)
     ax.set_axisbelow(True)
-    ax.set_ylim(0, max(max_val * 1.2, 1.5))
+    ax.set_xticks([])
 
     fig.tight_layout()
     fig.savefig(f"{ASSETS_DIR}/language_distribution.png", dpi=150, facecolor="#0D1117", edgecolor="none")
