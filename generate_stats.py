@@ -2,6 +2,7 @@ import json
 import os
 import pathlib
 import re
+import time
 import httpx
 from datetime import datetime, timezone, timedelta
 from collections import Counter
@@ -93,14 +94,64 @@ def _make_text_bar(items, total, bar_width=25):
     return f"```text\n{chart}\n```"
 
 
+def _format_bytes(value):
+    value = float(value)
+    units = ["B", "KB", "MB", "GB"]
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            if unit == "B":
+                return f"{int(value)} {unit}"
+            return f"{value:.1f} {unit}"
+        value /= 1024
+
+
+def _make_language_bar(items, total, bar_width=25):
+    label_w = max(_visual_width(label) for label, _ in items) + 2
+    val_w = 10
+
+    lines = []
+    for label, value in items:
+        pct = (value / total * 100) if total > 0 else 0.0
+        filled = int(bar_width * value / total) if total > 0 else 0
+        empty = bar_width - filled
+        bar = "█" * filled + "░" * empty
+        val_str = _format_bytes(value).rjust(9)
+        pct_str = f"{pct:5.1f} %"
+
+        label_part = _pad_visual(label, label_w)
+        val_part = _pad_visual(val_str, val_w)
+        lines.append(f"{label_part} {val_part} {bar}  {pct_str}")
+
+    chart = "\n".join(lines)
+    return f"```text\n{chart}\n```"
+
+
+def _get_with_retries(url, retries=3):
+    for attempt in range(1, retries + 1):
+        try:
+            return httpx.get(url, headers=HEADERS, timeout=60.0)
+        except httpx.HTTPError as exc:
+            print(f"Warning: request failed ({attempt}/{retries}) for {url}: {exc}")
+            if attempt < retries:
+                time.sleep(attempt)
+    return None
+
+
 def fetch_events():
     events = []
     for page in range(1, 6):
         url = f"https://api.github.com/users/{GITHUB_USERNAME}/events?per_page=100&page={page}"
-        resp = httpx.get(url, headers=HEADERS, timeout=30.0)
+        resp = _get_with_retries(url)
+        if resp is None:
+            print("Warning: failed to fetch events")
+            return None if not events else events
         if resp.status_code != 200:
-            break
+            print(f"Warning: GitHub events API returned {resp.status_code}: {resp.text[:200]}")
+            return None if not events else events
         data = resp.json()
+        if not isinstance(data, list):
+            print(f"Warning: unexpected events API response: {str(data)[:200]}")
+            return None if not events else events
         if not data:
             break
         push_events = [e for e in data if e.get("type") == "PushEvent"]
@@ -120,13 +171,14 @@ def classify_time_period(hour):
 
 def fetch_repo_languages(repo_name):
     url = f"https://api.github.com/repos/{repo_name}/languages"
-    resp = httpx.get(url, headers=HEADERS, timeout=30.0)
+    resp = _get_with_retries(url)
+    if resp is None:
+        return {}
     if resp.status_code == 200:
         data = resp.json()
         if data:
-            primary_lang = max(data, key=data.get)
-            return primary_lang, data
-    return "Unknown", {}
+            return data
+    return {}
 
 
 def create_time_distribution_chart(period_counter):
@@ -151,10 +203,15 @@ def create_language_chart(lang_counter):
     if not lang_counter:
         return "暂无数据"
 
-    sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)[:10]
-    total = sum(v for _, v in sorted_langs)
-    items = [(f"💻 {lang}", count) for lang, count in sorted_langs]
-    return _make_text_bar(items, total)
+    sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)
+    total = sum(lang_counter.values())
+    display_langs = sorted_langs[:3]
+    other_total = sum(byte_count for _, byte_count in sorted_langs[3:])
+    if other_total > 0:
+        display_langs.append(("Other", other_total))
+
+    items = [(lang, byte_count) for lang, byte_count in display_langs]
+    return _make_language_bar(items, total)
 
 
 def generate_readme(period_counter, day_counter, lang_counter, total_pushes,
@@ -173,45 +230,177 @@ def generate_readme(period_counter, day_counter, lang_counter, total_pushes,
 
     peak_lang = max(lang_counter, key=lang_counter.get) if lang_counter else "暂无"
 
-    readme = f"""# 👋 嗨，我是 蛋烧肉粽
+    updated_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 
-> 📊 以下数据由 GitHub Actions 自动更新 | 最后更新: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}
+    readme = f"""<table style="border-color: transparent;" cellspacing=0>
+<tr>
+<td valign="center" width="62%">
 
----
+# Building with AI
 
-## 📈 我的编码活动统计
+**Artificial Intelligence**
 
-基于最近 {total_pushes} 次 Push 记录：
+I build around AI: tools, systems, and experiments that turn vague ideas into usable workflows.
 
-| 🕐 最活跃时段 | 📆 最活跃星期 | 💻 最常用语言 |
+**Tools & Systems**
+
+I care about the moment when intelligence stops being only a chat box and starts becoming something that can plan, call tools, remember context, and help with real work.
+
+**Open Questions**
+
+How should humans collaborate with AI when the answer is not only text, but also an action, a process, or a small system?
+
+</td>
+<td valign="top" width="38%">
+<p align="right">
+
+***
+
+> Human × AI, not Human vs. AI
+
+***
+
+<img width="420" src="https://github-readme-stats.vercel.app/api?username=jyh20030112&show_icons=true&hide_border=true&theme=transparent" />
+
+***
+
+> 把想法变成可运行的小系统
+
+***
+
+</p>
+</td>
+</tr>
+</table>
+
+<table style="border-color: transparent;" cellspacing=0>
+<tr>
+<td valign="top" width="64%">
+
+[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![AI](https://img.shields.io/badge/AI-111111?style=flat-square&logo=openai&logoColor=white)](https://github.com/jyh20030112)
+[![GitHub](https://img.shields.io/badge/GitHub-jyh20030112-181717?style=flat-square&logo=github)](https://github.com/jyh20030112)
+
+<!--START_SECTION:profile-stats-->
+**Coding Rhythm**
+
+> 数据由 GitHub Actions 自动更新 | Last Updated: {updated_at}
+
+基于最近 **{total_pushes}** 次公开 Push 记录：
+
+| Most Active Time | Most Productive Day | Main Language |
 |:---:|:---:|:---:|
 | {peak_period_cn.get(peak_period, peak_period)} | {peak_day} | {peak_lang} |
 
----
-
-### 🕐 Push 时间段分布
+### Time Distribution
 
 {period_chart}
 
-### 📆 星期几最活跃
+### Weekday Distribution
 
 {weekday_chart}
 
-### 💻 编程语言分布
+### Language Distribution
 
 {lang_chart}
+<!--END_SECTION:profile-stats-->
 
----
+</td>
+<td valign="top" width="36%">
+
+**Currently**
+
+> Building around AI
+
+<table style="border-color: transparent;" cellspacing=0>
+  <tr>
+    <td valign="center">AI-native tools</td>
+  </tr>
+  <tr>
+    <td valign="center">Agentic workflows</td>
+  </tr>
+  <tr>
+    <td valign="center">Human-AI collaboration</td>
+  </tr>
+  <tr>
+    <td valign="center">Small intelligent systems</td>
+  </tr>
+</table>
+
+**Traces**
+
+<table style="border-color: transparent;" cellspacing=0>
+  <tr>
+    <td valign="center">
+      <a href="https://github.com/jyh20030112">
+        <img src="https://img.shields.io/badge/AI--native-Tools-blue?style=flat-square" alt="AI-native Tools" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td valign="center">
+      <a href="https://github.com/jyh20030112">
+        <img src="https://img.shields.io/badge/Intelligent-Workflows-green?style=flat-square" alt="Intelligent Workflows" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td valign="center">
+      <a href="https://github.com/jyh20030112">
+        <img src="https://img.shields.io/badge/Human--AI-Collaboration-orange?style=flat-square" alt="Human-AI Collaboration" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td valign="center">
+      <a href="https://github.com/jyh20030112">
+        <img src="https://img.shields.io/badge/Small-Systems-purple?style=flat-square" alt="Small Systems" />
+      </a>
+    </td>
+  </tr>
+</table>
+
+</td>
+</tr>
+</table>
+
+<table style="border-color: transparent;" cellspacing=0>
+<tr>
+<td valign="top" width="34%">
+
+### Direction
+
+AI as a material for building.
+
+Not only prompts, not only models, but interfaces, tools, memory, workflows, and the quiet parts that make intelligence useful.
+
+</td>
+<td valign="top" width="33%">
+
+### Experiments
+
+Small systems first.
+
+I like projects that can be touched, run, broken, repaired, and slowly shaped into something clearer.
+
+</td>
+<td valign="top" width="33%">
+
+<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=jyh20030112&layout=compact&hide_border=true&theme=transparent" />
+
+</td>
+</tr>
+</table>
 
 <details>
-<summary>🤖 关于这些统计</summary>
+<summary>About the activity stats</summary>
 <br>
 
-这些数据由 GitHub Actions 每 6 小时自动更新。
-统计基于我最近的公开 Push 事件，
-通过 Unicode 文本条形图直接渲染，无需加载外部图片。
+These charts are generated from recent public Push events. Language distribution aggregates GitHub language bytes from repositories that appear in those Push events, then renders everything as Unicode text bars.
 
 </details>
+
+<p align="right">Building with AI, one small system at a time.</p>
 """
     return readme
 
@@ -223,11 +412,18 @@ def main():
 
     print("\n[1/3] 获取 Push 事件...")
     events = fetch_events()
+    if events is None:
+        print("\nGitHub events API 暂时不可用，跳过 README 更新，避免写入空统计。")
+        return
+    if not events:
+        print("\n未获取到 Push 事件，跳过 README 更新，避免写入空统计。")
+        return
 
     period_counter = Counter()
     day_counter = Counter()
     lang_counter = Counter()
     repo_lang_cache = {}
+    pushed_repos_seen = set()
 
     print(f"\n[2/3] 分析 {len(events)} 个 Push 事件...")
     for i, event in enumerate(events):
@@ -245,13 +441,13 @@ def main():
         day_counter[weekday] += 1
 
         repo_name = event.get("repo", {}).get("name", "")
-        if repo_name and repo_name not in repo_lang_cache:
-            primary_lang, _ = fetch_repo_languages(repo_name)
-            repo_lang_cache[repo_name] = primary_lang
+        if repo_name and repo_name not in pushed_repos_seen:
+            if repo_name not in repo_lang_cache:
+                repo_lang_cache[repo_name] = fetch_repo_languages(repo_name)
 
-        lang = repo_lang_cache.get(repo_name, "Unknown")
-        if lang and lang != "Unknown":
-            lang_counter[lang] += 1
+            for lang, byte_count in repo_lang_cache[repo_name].items():
+                lang_counter[lang] += byte_count
+            pushed_repos_seen.add(repo_name)
 
         if (i + 1) % 50 == 0:
             print(f"  已处理 {i + 1}/{len(events)} 个事件...")
