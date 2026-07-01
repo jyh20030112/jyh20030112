@@ -26,7 +26,7 @@ How should humans collaborate with AI when the answer is not only text, but also
 
 ***
 
-<img width="420" src="https://github-readme-stats.vercel.app/api?username=jyh20030112&show_icons=true&hide_border=true&theme=transparent" />
+<img width="420" align="center" src="./profile-3d-contrib/profile-night-rainbow.svg" />
 
 ***
 
@@ -50,9 +50,9 @@ How should humans collaborate with AI when the answer is not only text, but also
 <!--START_SECTION:profile-stats-->
 **Coding Rhythm**
 
-> 数据由 GitHub Actions 自动更新 | Last Updated: 2026-07-01 14:56 UTC
+> 数据由 GitHub Actions 自动更新 | Last Updated: 2026-07-01 15:30 UTC
 
-基于最近 **88** 次公开 Push 记录：
+基于最近 **89** 次公开 Push 记录：
 
 | Most Active Time | Most Productive Day | Main Language |
 |:---:|:---:|:---:|
@@ -61,31 +61,31 @@ How should humans collaborate with AI when the answer is not only text, but also
 ### Time Distribution
 
 ```text
-🌞 上午 (06-12)     19次 Push  █████░░░░░░░░░░░░░░░░░░░░   21.6 %
-🌆 下午 (12-18)     39次 Push  ███████████░░░░░░░░░░░░░░   44.3 %
-🌃 傍晚 (18-24)     27次 Push  ███████░░░░░░░░░░░░░░░░░░   30.7 %
+🌞 上午 (06-12)     19次 Push  █████░░░░░░░░░░░░░░░░░░░░   21.3 %
+🌆 下午 (12-18)     39次 Push  ██████████░░░░░░░░░░░░░░░   43.8 %
+🌃 傍晚 (18-24)     28次 Push  ███████░░░░░░░░░░░░░░░░░░   31.5 %
 🌙 深夜 (00-06)      3次 Push  ░░░░░░░░░░░░░░░░░░░░░░░░░    3.4 %
 ```
 
 ### Weekday Distribution
 
 ```text
-🐔 周一     20次 Push  █████░░░░░░░░░░░░░░░░░░░░   22.7 %
-🐱 周二     12次 Push  ███░░░░░░░░░░░░░░░░░░░░░░   13.6 %
-🐶 周三     14次 Push  ███░░░░░░░░░░░░░░░░░░░░░░   15.9 %
-🐮 周四     20次 Push  █████░░░░░░░░░░░░░░░░░░░░   22.7 %
-🐯 周五      9次 Push  ██░░░░░░░░░░░░░░░░░░░░░░░   10.2 %
-🐰 周六      7次 Push  █░░░░░░░░░░░░░░░░░░░░░░░░    8.0 %
-🐲 周日      6次 Push  █░░░░░░░░░░░░░░░░░░░░░░░░    6.8 %
+🐔 周一     20次 Push  █████░░░░░░░░░░░░░░░░░░░░   22.5 %
+🐱 周二     12次 Push  ███░░░░░░░░░░░░░░░░░░░░░░   13.5 %
+🐶 周三     15次 Push  ████░░░░░░░░░░░░░░░░░░░░░   16.9 %
+🐮 周四     20次 Push  █████░░░░░░░░░░░░░░░░░░░░   22.5 %
+🐯 周五      9次 Push  ██░░░░░░░░░░░░░░░░░░░░░░░   10.1 %
+🐰 周六      7次 Push  █░░░░░░░░░░░░░░░░░░░░░░░░    7.9 %
+🐲 周日      6次 Push  █░░░░░░░░░░░░░░░░░░░░░░░░    6.7 %
 ```
 
 ### Language Distribution
 
 ```text
-Python        604.9 KB  ███████████████████░░░░░░   78.0 %
-GDScript       88.4 KB  ██░░░░░░░░░░░░░░░░░░░░░░░   11.4 %
-CSS            29.2 KB  ░░░░░░░░░░░░░░░░░░░░░░░░░    3.8 %
-Other          52.6 KB  █░░░░░░░░░░░░░░░░░░░░░░░░    6.8 %
+Python      610.6 KB  ███████████████████░░░░░░   78.2 %
+GDScript     88.4 KB  ██░░░░░░░░░░░░░░░░░░░░░░░   11.3 %
+CSS          29.2 KB  ░░░░░░░░░░░░░░░░░░░░░░░░░    3.7 %
+Other        52.7 KB  █░░░░░░░░░░░░░░░░░░░░░░░░    6.7 %
 ```
 <!--END_SECTION:profile-stats-->
 
@@ -170,7 +170,7 @@ I like projects that can be touched, run, broken, repaired, and slowly shaped in
 </td>
 <td valign="top" width="33%">
 
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=jyh20030112&layout=compact&hide_border=true&theme=transparent" />
+<img src="./github-metrics.svg" />
 
 </td>
 </tr>

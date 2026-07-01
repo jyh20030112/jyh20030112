@@ -1,0 +1,24 @@
+name: Generate GitHub Metrics
+
+on:
+  schedule:
+    - cron: "45 18 * * *"
+  workflow_dispatch:
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Generate metrics
+        uses: lowlighter/metrics@latest
+        with:
+          filename: github-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
+          base: header, activity, community, repositories, metadata
+          config_timezone: Asia/Shanghai
+          output_action: commit
+          committer_branch: main
+          committer_message: Generate GitHub metrics

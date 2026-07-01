@@ -260,7 +260,7 @@ How should humans collaborate with AI when the answer is not only text, but also
 
 ***
 
-<img width="420" src="https://github-readme-stats.vercel.app/api?username=jyh20030112&show_icons=true&hide_border=true&theme=transparent" />
+<img width="420" align="center" src="./profile-3d-contrib/profile-night-rainbow.svg" />
 
 ***
 
@@ -386,7 +386,7 @@ I like projects that can be touched, run, broken, repaired, and slowly shaped in
 </td>
 <td valign="top" width="33%">
 
-<img src="https://github-readme-stats.vercel.app/api/top-langs/?username=jyh20030112&layout=compact&hide_border=true&theme=transparent" />
+<img src="./github-metrics.svg" />
 
 </td>
 </tr>
