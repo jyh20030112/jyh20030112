@@ -1,477 +1,541 @@
+import concurrent.futures
 import json
+import math
 import os
 import pathlib
-import re
 import time
-import httpx
-from datetime import datetime, timezone, timedelta
 from collections import Counter
+from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+import httpx
 
 GITHUB_USERNAME = "jyh20030112"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+GITHUB_API_URL = "https://api.github.com"
+API_VERSION = "2022-11-28"
+README_PATH = pathlib.Path("README.md")
+CACHE_PATH = pathlib.Path(".github/data/commit-stats.json")
+CACHE_VERSION = 1
+SEARCH_PAGE_SIZE = 100
+MAX_SEARCH_RESULTS = 1_000
+DETAIL_WORKERS = 2
+START_MARKER = "<!--START_SECTION:profile-stats-->"
+END_MARKER = "<!--END_SECTION:profile-stats-->"
+SHANGHAI = ZoneInfo("Asia/Shanghai")
 
 HEADERS = {
-    "Accept": "application/vnd.github.v3+json",
+    "Accept": "application/vnd.github+json",
     "User-Agent": "GitHub-Profile-Stats",
+    "X-GitHub-Api-Version": API_VERSION,
 }
 if GITHUB_TOKEN:
-    HEADERS["Authorization"] = f"token {GITHUB_TOKEN}"
+    HEADERS["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
-TIME_PERIODS = {
-    "morning": (6, 12),
-    "afternoon": (12, 18),
-    "evening": (18, 24),
-    "night": (0, 6),
+TIME_PERIODS = (
+    ("night", 0, 8, "🌙 00–08"),
+    ("morning", 8, 12, "🌞 08–12"),
+    ("afternoon", 12, 18, "🌤️ 12–18"),
+    ("evening", 18, 24, "🌆 18–24"),
+)
+
+WEEKDAY_LABELS = (
+    "🐔 Monday",
+    "🐱 Tuesday",
+    "🐶 Wednesday",
+    "🐮 Thursday",
+    "🐯 Friday",
+    "🐰 Saturday",
+    "🐲 Sunday",
+)
+
+LANGUAGE_BY_SUFFIX = {
+    ".astro": "Astro",
+    ".c": "C",
+    ".cc": "C++",
+    ".cjs": "JavaScript",
+    ".cpp": "C++",
+    ".cs": "C#",
+    ".css": "CSS",
+    ".cxx": "C++",
+    ".dart": "Dart",
+    ".ex": "Elixir",
+    ".exs": "Elixir",
+    ".fs": "F#",
+    ".fsx": "F#",
+    ".go": "Go",
+    ".h": "C",
+    ".hpp": "C++",
+    ".html": "HTML",
+    ".htm": "HTML",
+    ".java": "Java",
+    ".js": "JavaScript",
+    ".jsx": "JavaScript",
+    ".kt": "Kotlin",
+    ".kts": "Kotlin",
+    ".less": "Less",
+    ".lua": "Lua",
+    ".m": "Objective-C",
+    ".mm": "Objective-C++",
+    ".mjs": "JavaScript",
+    ".mts": "TypeScript",
+    ".php": "PHP",
+    ".pl": "Perl",
+    ".py": "Python",
+    ".pyi": "Python",
+    ".r": "R",
+    ".rb": "Ruby",
+    ".rs": "Rust",
+    ".sass": "Sass",
+    ".scala": "Scala",
+    ".scss": "SCSS",
+    ".sh": "Shell",
+    ".sql": "SQL",
+    ".svelte": "Svelte",
+    ".swift": "Swift",
+    ".ts": "TypeScript",
+    ".tsx": "TypeScript",
+    ".cts": "TypeScript",
+    ".vue": "Vue",
+    ".zig": "Zig",
 }
 
-WEEKDAY_NAMES_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-
-PERIOD_EMOJI = {
-    "morning": "🌞",
-    "afternoon": "🌆",
-    "evening": "🌃",
-    "night": "🌙",
+SPECIAL_FILENAMES = {
+    "cmakelists.txt": "CMake",
+    "dockerfile": "Dockerfile",
+    "gemfile": "Ruby",
+    "makefile": "Makefile",
+    "rakefile": "Ruby",
 }
 
-PERIOD_LABELS = {
-    "morning": "上午 (06-12)",
-    "afternoon": "下午 (12-18)",
-    "evening": "傍晚 (18-24)",
-    "night": "深夜 (00-06)",
+IGNORED_FILENAMES = {
+    "bun.lock",
+    "bun.lockb",
+    "cargo.lock",
+    "composer.lock",
+    "go.sum",
+    "package-lock.json",
+    "pipfile.lock",
+    "pnpm-lock.yaml",
+    "poetry.lock",
+    "uv.lock",
+    "yarn.lock",
 }
 
-PERIOD_ORDER = ["morning", "afternoon", "evening", "night"]
-
-DAY_EMOJI = ["🐔", "🐱", "🐶", "🐮", "🐯", "🐰", "🐲"]
-
-DAY_LABELS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
-
-
-ZERO_WIDTH_CHARS = {
-    "\ufe0f", "\ufe0e",
+IGNORED_PATH_PARTS = {
+    ".cache",
+    ".next",
+    ".nuxt",
+    ".output",
+    ".venv",
+    "build",
+    "coverage",
+    "dist",
+    "node_modules",
+    "profile-3d-contrib",
+    "target",
+    "vendor",
 }
 
+ZERO_WIDTH_CHARS = {"\ufe0f", "\ufe0e"}
 
-def _visual_width(s):
-    w = 0
-    for ch in str(s):
-        if ch in ZERO_WIDTH_CHARS:
+
+def _visual_width(value):
+    width = 0
+    for char in str(value):
+        if char in ZERO_WIDTH_CHARS:
             continue
-        if '\u4e00' <= ch <= '\u9fff' or '\u3000' <= ch <= '\u303f' or '\uff00' <= ch <= '\uffef':
-            w += 2
-        elif ord(ch) > 127:
-            w += 2
-        else:
-            w += 1
-    return w
+        width += 2 if ord(char) > 127 else 1
+    return width
 
 
-def _pad_visual(s, target_width):
-    cur = _visual_width(s)
-    if cur >= target_width:
-        return s + " "
-    return s + " " * (target_width - cur)
+def _pad_visual(value, target_width):
+    current = _visual_width(value)
+    return str(value) + " " * max(target_width - current, 1)
 
 
-def _make_text_bar(items, total, bar_width=25):
-    label_w = max(_visual_width(label) for label, _ in items) + 2
-    val_w = 12
-
+def _make_count_bar(items, total, bar_width=25):
+    label_width = max(_visual_width(label) for label, _ in items) + 2
+    value_width = max(len(f"{value:,} commits") for _, value in items) + 1
     lines = []
+
     for label, value in items:
-        pct = (value / total * 100) if total > 0 else 0.0
-        filled = int(bar_width * value / total) if total > 0 else 0
-        empty = bar_width - filled
-        bar = "█" * filled + "░" * empty
-        val_str = f"{int(value)}次 Push".rjust(10)
-        pct_str = f"{pct:5.1f} %"
+        percentage = value / total * 100 if total else 0.0
+        filled = int(bar_width * value / total) if total else 0
+        bar = "█" * filled + "░" * (bar_width - filled)
+        count = f"{value:,} commits"
+        lines.append(
+            f"{_pad_visual(label, label_width)}"
+            f"{_pad_visual(count, value_width)}"
+            f"{bar}  {percentage:5.1f} %"
+        )
 
-        label_part = _pad_visual(label, label_w)
-        val_part = _pad_visual(val_str, val_w)
-        lines.append(f"{label_part} {val_part} {bar}  {pct_str}")
-
-    chart = "\n".join(lines)
-    return f"```text\n{chart}\n```"
-
-
-def _format_bytes(value):
-    value = float(value)
-    units = ["B", "KB", "MB", "GB"]
-    for unit in units:
-        if value < 1024 or unit == units[-1]:
-            if unit == "B":
-                return f"{int(value)} {unit}"
-            return f"{value:.1f} {unit}"
-        value /= 1024
+    return "```text\n" + "\n".join(lines) + "\n```"
 
 
 def _make_language_bar(items, total, bar_width=25):
-    label_w = max(_visual_width(label) for label, _ in items) + 2
-    val_w = 10
-
+    label_width = max(_visual_width(label) for label, _ in items) + 2
+    value_width = max(len(f"{value:,} lines") for _, value in items) + 1
     lines = []
+
     for label, value in items:
-        pct = (value / total * 100) if total > 0 else 0.0
-        filled = int(bar_width * value / total) if total > 0 else 0
-        empty = bar_width - filled
-        bar = "█" * filled + "░" * empty
-        val_str = _format_bytes(value).rjust(9)
-        pct_str = f"{pct:5.1f} %"
+        percentage = value / total * 100 if total else 0.0
+        filled = int(bar_width * value / total) if total else 0
+        bar = "█" * filled + "░" * (bar_width - filled)
+        changes = f"{value:,} lines"
+        lines.append(
+            f"{_pad_visual(label, label_width)}"
+            f"{_pad_visual(changes, value_width)}"
+            f"{bar}  {percentage:5.1f} %"
+        )
 
-        label_part = _pad_visual(label, label_w)
-        val_part = _pad_visual(val_str, val_w)
-        lines.append(f"{label_part} {val_part} {bar}  {pct_str}")
-
-    chart = "\n".join(lines)
-    return f"```text\n{chart}\n```"
+    return "```text\n" + "\n".join(lines) + "\n```"
 
 
-def _get_with_retries(url, retries=3):
+def _request_json(client, url, params=None, retries=6, allow_not_found=False):
     for attempt in range(1, retries + 1):
         try:
-            return httpx.get(url, headers=HEADERS, timeout=60.0)
-        except httpx.HTTPError as exc:
-            print(f"Warning: request failed ({attempt}/{retries}) for {url}: {exc}")
+            response = client.get(url, params=params)
+        except httpx.HTTPError as error:
+            if attempt == retries:
+                raise RuntimeError(f"Request failed for {url}: {error}") from error
+            time.sleep(attempt * 2)
+            continue
+
+        if response.status_code == 404 and allow_not_found:
+            return None
+        if response.status_code == 200:
+            return response.json()
+
+        if response.status_code in {403, 429}:
+            remaining = response.headers.get("X-RateLimit-Remaining")
+            if remaining == "0":
+                reset = response.headers.get("X-RateLimit-Reset", "unknown")
+                raise RuntimeError(f"GitHub API rate limit exhausted; reset at {reset}")
             if attempt < retries:
-                time.sleep(attempt)
-    return None
+                retry_after = response.headers.get("Retry-After")
+                delay = (
+                    int(retry_after)
+                    if retry_after and retry_after.isdigit()
+                    else attempt * 10
+                )
+                print(
+                    f"GitHub asked us to slow down; retrying in {min(delay, 30)} seconds..."
+                )
+                time.sleep(min(delay, 30))
+                continue
+
+        if response.status_code >= 500 and attempt < retries:
+            time.sleep(attempt * 2)
+            continue
+
+        body = response.text[:300].replace("\n", " ")
+        raise RuntimeError(
+            f"GitHub API returned {response.status_code} for {url}: {body}"
+        )
+
+    raise RuntimeError(f"Request failed for {url}")
 
 
-def fetch_events():
-    events = []
-    for page in range(1, 6):
-        url = f"https://api.github.com/users/{GITHUB_USERNAME}/events?per_page=100&page={page}"
-        resp = _get_with_retries(url)
-        if resp is None:
-            print("Warning: failed to fetch events")
-            return None if not events else events
-        if resp.status_code != 200:
-            print(f"Warning: GitHub events API returned {resp.status_code}: {resp.text[:200]}")
-            return None if not events else events
-        data = resp.json()
-        if not isinstance(data, list):
-            print(f"Warning: unexpected events API response: {str(data)[:200]}")
-            return None if not events else events
-        if not data:
-            break
-        push_events = [e for e in data if e.get("type") == "PushEvent"]
-        events.extend(push_events)
-        if len(data) < 100:
-            break
-    print(f"Fetched {len(events)} push events")
-    return events
+def _search_query(start_date, end_date):
+    return (
+        f"author:{GITHUB_USERNAME} "
+        f"author-date:{start_date.isoformat()}..{end_date.isoformat()}"
+    )
+
+
+def _search_commit_range(client, start_date, end_date):
+    probe = _request_json(
+        client,
+        f"{GITHUB_API_URL}/search/commits",
+        params={"q": _search_query(start_date, end_date), "per_page": 1},
+    )
+    if probe.get("incomplete_results"):
+        raise RuntimeError("GitHub returned incomplete commit search results")
+
+    total = int(probe.get("total_count", 0))
+    if total > MAX_SEARCH_RESULTS and start_date < end_date:
+        midpoint = start_date + (end_date - start_date) // 2
+        left = _search_commit_range(client, start_date, midpoint)
+        right = _search_commit_range(client, midpoint + timedelta(days=1), end_date)
+        return left + right
+
+    if total > MAX_SEARCH_RESULTS:
+        raise RuntimeError(
+            f"More than {MAX_SEARCH_RESULTS:,} commits were authored on {start_date}; "
+            "the search range cannot be divided further"
+        )
+
+    commits = []
+    pages = math.ceil(total / SEARCH_PAGE_SIZE)
+    for page in range(1, pages + 1):
+        page_data = _request_json(
+            client,
+            f"{GITHUB_API_URL}/search/commits",
+            params={
+                "q": _search_query(start_date, end_date),
+                "sort": "author-date",
+                "order": "desc",
+                "per_page": SEARCH_PAGE_SIZE,
+                "page": page,
+            },
+        )
+        if page_data.get("incomplete_results"):
+            raise RuntimeError("GitHub returned incomplete commit search results")
+        commits.extend(page_data.get("items", []))
+        if page < pages:
+            time.sleep(2)
+
+    return commits
+
+
+def fetch_all_public_commits(client):
+    commits = _search_commit_range(client, date(1970, 1, 1), datetime.now(UTC).date())
+    unique_commits = {}
+
+    for item in commits:
+        sha = item.get("sha")
+        authored_at = item.get("commit", {}).get("author", {}).get("date")
+        detail_url = item.get("url")
+        if sha and authored_at and detail_url:
+            unique_commits.setdefault(
+                sha,
+                {"sha": sha, "authored_at": authored_at, "detail_url": detail_url},
+            )
+
+    return sorted(unique_commits.values(), key=lambda item: item["authored_at"])
 
 
 def classify_time_period(hour):
-    for period, (start, end) in TIME_PERIODS.items():
+    for name, start, end, _label in TIME_PERIODS:
         if start <= hour < end:
-            return period
-    return "night"
+            return name
+    raise ValueError(f"Hour outside expected range: {hour}")
 
 
-def fetch_repo_languages(repo_name):
-    url = f"https://api.github.com/repos/{repo_name}/languages"
-    resp = _get_with_retries(url)
-    if resp is None:
+def classify_language(filename):
+    path = pathlib.PurePosixPath(filename)
+    lower_parts = {part.lower() for part in path.parts}
+    basename = path.name.lower()
+
+    if lower_parts & IGNORED_PATH_PARTS:
+        return None
+    if basename in IGNORED_FILENAMES:
+        return None
+    if ".min." in basename or basename.endswith(".map"):
+        return None
+    if basename in SPECIAL_FILENAMES:
+        return SPECIAL_FILENAMES[basename]
+
+    return LANGUAGE_BY_SUFFIX.get(path.suffix.lower())
+
+
+def _fetch_commit_languages(client, detail_url):
+    languages = Counter()
+    page = 1
+
+    while True:
+        data = _request_json(
+            client,
+            detail_url,
+            params={"per_page": 100, "page": page},
+            allow_not_found=True,
+        )
+        if data is None:
+            return {}
+
+        files = data.get("files", [])
+        for changed_file in files:
+            language = classify_language(changed_file.get("filename", ""))
+            changes = int(changed_file.get("changes", 0) or 0)
+            if language and changes > 0:
+                languages[language] += changes
+
+        if len(files) < 100:
+            break
+        page += 1
+
+    return dict(languages)
+
+
+def _load_cache():
+    if not CACHE_PATH.exists():
         return {}
-    if resp.status_code == 200:
-        data = resp.json()
-        if data:
-            return data
-    return {}
+
+    try:
+        data = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    if data.get("version") != CACHE_VERSION or data.get("username") != GITHUB_USERNAME:
+        return {}
+    return data.get("commits", {})
+
+
+def _write_cache(commit_languages):
+    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    data = {
+        "version": CACHE_VERSION,
+        "username": GITHUB_USERNAME,
+        "commits": dict(sorted(commit_languages.items())),
+    }
+    CACHE_PATH.write_text(
+        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def fetch_contributed_languages(client, commits):
+    cached = _load_cache()
+    current_shas = {commit["sha"] for commit in commits}
+    languages_by_commit = {
+        sha: languages for sha, languages in cached.items() if sha in current_shas
+    }
+    missing = [commit for commit in commits if commit["sha"] not in languages_by_commit]
+
+    if missing:
+        print(f"Fetching changed files for {len(missing):,} uncached commits...")
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=DETAIL_WORKERS
+        ) as executor:
+            futures = {
+                executor.submit(
+                    _fetch_commit_languages, client, commit["detail_url"]
+                ): commit
+                for commit in missing
+            }
+            for index, future in enumerate(
+                concurrent.futures.as_completed(futures), start=1
+            ):
+                commit = futures[future]
+                languages_by_commit[commit["sha"]] = future.result()
+                if index % 25 == 0 or index == len(missing):
+                    _write_cache(languages_by_commit)
+                    print(f"  Processed {index:,}/{len(missing):,} commit details")
+
+    return languages_by_commit
+
+
+def build_counters(commits, languages_by_commit):
+    period_counter = Counter()
+    weekday_counter = Counter()
+    language_counter = Counter()
+
+    for commit in commits:
+        authored_at = datetime.fromisoformat(commit["authored_at"])
+        local_time = authored_at.astimezone(SHANGHAI)
+        period_counter[classify_time_period(local_time.hour)] += 1
+        weekday_counter[local_time.weekday()] += 1
+        language_counter.update(languages_by_commit.get(commit["sha"], {}))
+
+    return period_counter, weekday_counter, language_counter
 
 
 def create_time_distribution_chart(period_counter):
-    total = max(sum(period_counter.values()), 1)
-    items = [
-        (f"{PERIOD_EMOJI[p]} {PERIOD_LABELS[p]}", period_counter.get(p, 0))
-        for p in PERIOD_ORDER
-    ]
-    return _make_text_bar(items, total)
-
-
-def create_weekday_chart(day_counter):
-    total = max(sum(day_counter.values()), 1)
-    items = [
-        (f"{DAY_EMOJI[i]} {DAY_LABELS[i]}", day_counter.get(i, 0))
-        for i in range(7)
-    ]
-    return _make_text_bar(items, total)
-
-
-def create_language_chart(lang_counter):
-    if not lang_counter:
-        return "暂无数据"
-
-    sorted_langs = sorted(lang_counter.items(), key=lambda x: x[1], reverse=True)
-    total = sum(lang_counter.values())
-    display_langs = sorted_langs[:3]
-    other_total = sum(byte_count for _, byte_count in sorted_langs[3:])
-    if other_total > 0:
-        display_langs.append(("Other", other_total))
-
-    items = [(lang, byte_count) for lang, byte_count in display_langs]
-    return _make_language_bar(items, total)
-
-
-def generate_readme(period_counter, day_counter, lang_counter, total_pushes,
-                     period_chart, weekday_chart, lang_chart):
     total = sum(period_counter.values())
-    peak_period = max(period_counter, key=period_counter.get) if total > 0 else "暂无"
-    peak_period_cn = {
-        "morning": "上午 🌅",
-        "afternoon": "下午 ☀️",
-        "evening": "傍晚 🌆",
-        "night": "深夜 🌙",
-    }
+    items = [
+        (label, period_counter.get(name, 0))
+        for name, _start, _end, label in TIME_PERIODS
+    ]
+    return _make_count_bar(items, total)
 
-    peak_day_idx = max(day_counter, key=day_counter.get) if day_counter else 0
-    peak_day = WEEKDAY_NAMES_CN[peak_day_idx] if day_counter else "暂无"
 
-    peak_lang = max(lang_counter, key=lang_counter.get) if lang_counter else "暂无"
+def create_weekday_chart(weekday_counter):
+    total = sum(weekday_counter.values())
+    items = [
+        (label, weekday_counter.get(index, 0))
+        for index, label in enumerate(WEEKDAY_LABELS)
+    ]
+    return _make_count_bar(items, total)
 
-    updated_at = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 
-    readme = f"""<table style="border-color: transparent;" cellspacing=0>
-<tr>
-<td valign="center" width="62%">
+def create_language_chart(language_counter):
+    if not language_counter:
+        return "No code-language changes found."
 
-# Building with AI
+    sorted_languages = language_counter.most_common()
+    total = sum(language_counter.values())
+    display_languages = sorted_languages[:3]
+    other_total = sum(value for _language, value in sorted_languages[3:])
+    if other_total:
+        display_languages.append(("Other", other_total))
 
-**Artificial Intelligence**
+    return _make_language_bar(display_languages, total)
 
-I build around AI: tools, systems, and experiments that turn vague ideas into usable workflows.
 
-**Tools & Systems**
+def render_stats_section(commits, period_counter, weekday_counter, language_counter):
+    total_commits = len(commits)
+    period_labels = {name: label for name, _start, _end, label in TIME_PERIODS}
+    peak_period_count = max(period_counter.values())
+    peak_period = " / ".join(
+        period_labels[name]
+        for name, _start, _end, _label in TIME_PERIODS
+        if period_counter.get(name, 0) == peak_period_count
+    )
+    peak_weekday_count = max(weekday_counter.values())
+    peak_weekday = " / ".join(
+        label.split(" ", 1)[1]
+        for index, label in enumerate(WEEKDAY_LABELS)
+        if weekday_counter.get(index, 0) == peak_weekday_count
+    )
+    primary_language = (
+        language_counter.most_common(1)[0][0] if language_counter else "N/A"
+    )
 
-I care about the moment when intelligence stops being only a chat box and starts becoming something that can plan, call tools, remember context, and help with real work.
+    return f"""Based on **{total_commits:,}** public commits authored by [@{GITHUB_USERNAME}](https://github.com/{GITHUB_USERNAME}):
 
-**Open Questions**
-
-How should humans collaborate with AI when the answer is not only text, but also an action, a process, or a small system?
-
-</td>
-<td valign="top" width="38%">
-<p align="right">
-
-***
-
-> Human × AI, not Human vs. AI
-
-***
-
-<img width="420" align="center" src="./profile-3d-contrib/profile-night-rainbow.svg" />
-
-***
-
-> 把想法变成可运行的小系统
-
-***
-
-</p>
-</td>
-</tr>
-</table>
-
-<table style="border-color: transparent;" cellspacing=0>
-<tr>
-<td valign="top" width="64%">
-
-[![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![AI](https://img.shields.io/badge/AI-111111?style=flat-square&logo=openai&logoColor=white)](https://github.com/jyh20030112)
-[![GitHub](https://img.shields.io/badge/GitHub-jyh20030112-181717?style=flat-square&logo=github)](https://github.com/jyh20030112)
-
-<!--START_SECTION:profile-stats-->
-**Coding Rhythm**
-
-> 数据由 GitHub Actions 自动更新 | Last Updated: {updated_at}
-
-基于最近 **{total_pushes}** 次公开 Push 记录：
-
-| Most Active Time | Most Productive Day | Main Language |
+| Most Active Time | Most Productive Day | Primary Language |
 |:---:|:---:|:---:|
-| {peak_period_cn.get(peak_period, peak_period)} | {peak_day} | {peak_lang} |
+| {peak_period} | {peak_weekday} | {primary_language} |
 
 ### Time Distribution
 
-{period_chart}
+{create_time_distribution_chart(period_counter)}
 
 ### Weekday Distribution
 
-{weekday_chart}
+{create_weekday_chart(weekday_counter)}
 
 ### Language Distribution
 
-{lang_chart}
-<!--END_SECTION:profile-stats-->
+{create_language_chart(language_counter)}"""
 
-</td>
-<td valign="top" width="36%">
 
-**Currently**
+def replace_stats_section(readme, stats_section):
+    start = readme.find(START_MARKER)
+    end = readme.find(END_MARKER)
+    if start == -1 or end == -1 or end <= start:
+        raise RuntimeError("README statistics markers are missing or out of order")
 
-> Building around AI
-
-<table style="border-color: transparent;" cellspacing=0>
-  <tr>
-    <td valign="center">AI-native tools</td>
-  </tr>
-  <tr>
-    <td valign="center">Agentic workflows</td>
-  </tr>
-  <tr>
-    <td valign="center">Human-AI collaboration</td>
-  </tr>
-  <tr>
-    <td valign="center">Small intelligent systems</td>
-  </tr>
-</table>
-
-**Traces**
-
-<table style="border-color: transparent;" cellspacing=0>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/AI--native-Tools-blue?style=flat-square" alt="AI-native Tools" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Intelligent-Workflows-green?style=flat-square" alt="Intelligent Workflows" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Human--AI-Collaboration-orange?style=flat-square" alt="Human-AI Collaboration" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Small-Systems-purple?style=flat-square" alt="Small Systems" />
-      </a>
-    </td>
-  </tr>
-</table>
-
-</td>
-</tr>
-</table>
-
-<table style="border-color: transparent;" cellspacing=0>
-<tr>
-<td valign="top" width="34%">
-
-### Direction
-
-AI as a material for building.
-
-Not only prompts, not only models, but interfaces, tools, memory, workflows, and the quiet parts that make intelligence useful.
-
-</td>
-<td valign="top" width="33%">
-
-### Experiments
-
-Small systems first.
-
-I like projects that can be touched, run, broken, repaired, and slowly shaped into something clearer.
-
-</td>
-<td valign="top" width="33%">
-
-<img src="./github-metrics.svg" />
-
-</td>
-</tr>
-</table>
-
-<details>
-<summary>About the activity stats</summary>
-<br>
-
-These charts are generated from recent public Push events. Language distribution aggregates GitHub language bytes from repositories that appear in those Push events, then renders everything as Unicode text bars.
-
-</details>
-
-<p align="right">Building with AI, one small system at a time.</p>
-"""
-    return readme
+    content_start = start + len(START_MARKER)
+    return readme[:content_start] + "\n" + stats_section.strip() + "\n" + readme[end:]
 
 
 def main():
-    print("=" * 50)
-    print("  GitHub Profile Stats Generator")
-    print("=" * 50)
+    print("GitHub profile commit statistics")
+    print("Searching all public commits authored by the profile owner...")
 
-    print("\n[1/3] 获取 Push 事件...")
-    events = fetch_events()
-    if events is None:
-        print("\nGitHub events API 暂时不可用，跳过 README 更新，避免写入空统计。")
-        return
-    if not events:
-        print("\n未获取到 Push 事件，跳过 README 更新，避免写入空统计。")
-        return
+    with httpx.Client(headers=HEADERS, timeout=60.0, follow_redirects=True) as client:
+        commits = fetch_all_public_commits(client)
+        if not commits:
+            print("No public commits found; README was left unchanged.")
+            return
 
-    period_counter = Counter()
-    day_counter = Counter()
-    lang_counter = Counter()
-    repo_lang_cache = {}
-    pushed_repos_seen = set()
+        print(f"Found {len(commits):,} unique public commits")
+        languages_by_commit = fetch_contributed_languages(client, commits)
 
-    print(f"\n[2/3] 分析 {len(events)} 个 Push 事件...")
-    for i, event in enumerate(events):
-        created_at = event.get("created_at")
-        if not created_at:
-            continue
-
-        dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-        bj_time = dt + timedelta(hours=8)
-        hour = bj_time.hour
-        weekday = bj_time.weekday()
-
-        period = classify_time_period(hour)
-        period_counter[period] += 1
-        day_counter[weekday] += 1
-
-        repo_name = event.get("repo", {}).get("name", "")
-        if repo_name and repo_name not in pushed_repos_seen:
-            if repo_name not in repo_lang_cache:
-                repo_lang_cache[repo_name] = fetch_repo_languages(repo_name)
-
-            for lang, byte_count in repo_lang_cache[repo_name].items():
-                lang_counter[lang] += byte_count
-            pushed_repos_seen.add(repo_name)
-
-        if (i + 1) % 50 == 0:
-            print(f"  已处理 {i + 1}/{len(events)} 个事件...")
-
-    total_pushes = len(events)
-    print(f"\n  分析完成! 总计 {total_pushes} 次 Push")
-
-    print("\n[3/3] 生成 README.md...")
-    period_chart = create_time_distribution_chart(period_counter)
-    weekday_chart = create_weekday_chart(day_counter)
-    lang_chart = create_language_chart(lang_counter)
-
-    readme_content = generate_readme(
-        period_counter, day_counter, lang_counter,
-        total_pushes, period_chart, weekday_chart, lang_chart,
+    period_counter, weekday_counter, language_counter = build_counters(
+        commits, languages_by_commit
     )
+    stats_section = render_stats_section(
+        commits, period_counter, weekday_counter, language_counter
+    )
+    current_readme = README_PATH.read_text(encoding="utf-8")
+    updated_readme = replace_stats_section(current_readme, stats_section)
 
-    readme_path = pathlib.Path("README.md")
-    readme_path.write_text(readme_content, encoding="utf-8")
-    print("  README.md 已更新!")
-
-    print("\n" + "=" * 50)
-    print("  完成!  README 已包含文本柱状图。")
-    print("=" * 50)
+    _write_cache(languages_by_commit)
+    README_PATH.write_text(updated_readme, encoding="utf-8")
+    print("README and commit-language cache updated successfully")
 
 
 if __name__ == "__main__":

@@ -2,8 +2,6 @@
 <tr>
 <td valign="center" width="62%">
 
-# Building with AI
-
 **Artificial Intelligence**
 
 I build around AI: tools, systems, and experiments that turn vague ideas into usable workflows.
@@ -30,7 +28,7 @@ How should humans collaborate with AI when the answer is not only text, but also
 
 ***
 
-> 把想法变成可运行的小系统
+> Turning ideas into working systems
 
 ***
 
@@ -41,108 +39,49 @@ How should humans collaborate with AI when the answer is not only text, but also
 
 <table style="border-color: transparent;" cellspacing=0>
 <tr>
-<td valign="top" width="64%">
+<td valign="top" width="100%">
 
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![AI](https://img.shields.io/badge/AI-111111?style=flat-square&logo=openai&logoColor=white)](https://github.com/jyh20030112)
 [![GitHub](https://img.shields.io/badge/GitHub-jyh20030112-181717?style=flat-square&logo=github)](https://github.com/jyh20030112)
 
 <!--START_SECTION:profile-stats-->
-**Coding Rhythm**
+Based on **442** public commits authored by [@jyh20030112](https://github.com/jyh20030112):
 
-> 数据由 GitHub Actions 自动更新 | Last Updated: 2026-08-28 01:56 UTC
-
-基于最近 **38** 次公开 Push 记录：
-
-| Most Active Time | Most Productive Day | Main Language |
+| Most Active Time | Most Productive Day | Primary Language |
 |:---:|:---:|:---:|
-| 傍晚 🌆 | 周五 | TypeScript |
+| 🌆 18–24 | Tuesday / Wednesday | Python |
 
 ### Time Distribution
 
 ```text
-🌞 上午 (06-12)      4次 Push  ██░░░░░░░░░░░░░░░░░░░░░░░   10.5 %
-🌆 下午 (12-18)     11次 Push  ███████░░░░░░░░░░░░░░░░░░   28.9 %
-🌃 傍晚 (18-24)     23次 Push  ███████████████░░░░░░░░░░   60.5 %
-🌙 深夜 (00-06)      0次 Push  ░░░░░░░░░░░░░░░░░░░░░░░░░    0.0 %
+🌙 00–08  28 commits  █░░░░░░░░░░░░░░░░░░░░░░░░    6.3 %
+🌞 08–12  63 commits  ███░░░░░░░░░░░░░░░░░░░░░░   14.3 %
+🌤️ 12–18  173 commits █████████░░░░░░░░░░░░░░░░   39.1 %
+🌆 18–24  178 commits ██████████░░░░░░░░░░░░░░░   40.3 %
 ```
 
 ### Weekday Distribution
 
 ```text
-🐔 周一      6次 Push  ███░░░░░░░░░░░░░░░░░░░░░░   15.8 %
-🐱 周二      3次 Push  █░░░░░░░░░░░░░░░░░░░░░░░░    7.9 %
-🐶 周三      0次 Push  ░░░░░░░░░░░░░░░░░░░░░░░░░    0.0 %
-🐮 周四      0次 Push  ░░░░░░░░░░░░░░░░░░░░░░░░░    0.0 %
-🐯 周五     15次 Push  █████████░░░░░░░░░░░░░░░░   39.5 %
-🐰 周六      5次 Push  ███░░░░░░░░░░░░░░░░░░░░░░   13.2 %
-🐲 周日      9次 Push  █████░░░░░░░░░░░░░░░░░░░░   23.7 %
+🐔 Monday     67 commits ███░░░░░░░░░░░░░░░░░░░░░░   15.2 %
+🐱 Tuesday    81 commits ████░░░░░░░░░░░░░░░░░░░░░   18.3 %
+🐶 Wednesday  81 commits ████░░░░░░░░░░░░░░░░░░░░░   18.3 %
+🐮 Thursday   73 commits ████░░░░░░░░░░░░░░░░░░░░░   16.5 %
+🐯 Friday     78 commits ████░░░░░░░░░░░░░░░░░░░░░   17.6 %
+🐰 Saturday   26 commits █░░░░░░░░░░░░░░░░░░░░░░░░    5.9 %
+🐲 Sunday     36 commits ██░░░░░░░░░░░░░░░░░░░░░░░    8.1 %
 ```
 
 ### Language Distribution
 
 ```text
-TypeScript     23.0 MB  ███████████████████████░░   95.0 %
-Python        533.5 KB  ░░░░░░░░░░░░░░░░░░░░░░░░░    2.2 %
-CSS           401.2 KB  ░░░░░░░░░░░░░░░░░░░░░░░░░    1.6 %
-Other         304.7 KB  ░░░░░░░░░░░░░░░░░░░░░░░░░    1.2 %
+Python      250,801 lines █████████████████████░░░░   85.1 %
+JavaScript  20,960 lines  █░░░░░░░░░░░░░░░░░░░░░░░░    7.1 %
+TypeScript  13,520 lines  █░░░░░░░░░░░░░░░░░░░░░░░░    4.6 %
+Other       9,283 lines   ░░░░░░░░░░░░░░░░░░░░░░░░░    3.2 %
 ```
 <!--END_SECTION:profile-stats-->
-
-</td>
-<td valign="top" width="36%">
-
-**Currently**
-
-> Building around AI
-
-<table style="border-color: transparent;" cellspacing=0>
-  <tr>
-    <td valign="center">AI-native tools</td>
-  </tr>
-  <tr>
-    <td valign="center">Agentic workflows</td>
-  </tr>
-  <tr>
-    <td valign="center">Human-AI collaboration</td>
-  </tr>
-  <tr>
-    <td valign="center">Small intelligent systems</td>
-  </tr>
-</table>
-
-**Traces**
-
-<table style="border-color: transparent;" cellspacing=0>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/AI--native-Tools-blue?style=flat-square" alt="AI-native Tools" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Intelligent-Workflows-green?style=flat-square" alt="Intelligent Workflows" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Human--AI-Collaboration-orange?style=flat-square" alt="Human-AI Collaboration" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td valign="center">
-      <a href="https://github.com/jyh20030112">
-        <img src="https://img.shields.io/badge/Small-Systems-purple?style=flat-square" alt="Small Systems" />
-      </a>
-    </td>
-  </tr>
-</table>
 
 </td>
 </tr>
@@ -180,7 +119,7 @@ I like projects that can be touched, run, broken, repaired, and slowly shaped in
 <summary>About the activity stats</summary>
 <br>
 
-These charts are generated from recent public Push events. Language distribution aggregates GitHub language bytes from repositories that appear in those Push events, then renders everything as Unicode text bars.
+Commit counts include all public commits authored by this GitHub account. Language distribution is weighted by additions and deletions in code files changed by those commits; generated files, lockfiles, dependencies, and non-code assets are excluded.
 
 </details>
 
