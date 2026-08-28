@@ -10,9 +10,14 @@ on:
     paths:
       - "generate_stats.py"
 
+concurrency:
+  group: profile-readme-writer
+  cancel-in-progress: false
+
 jobs:
   update-stats:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: write
 
@@ -23,20 +28,26 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.28"
+          enable-cache: true
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync --frozen --no-dev
 
       - name: Generate stats and update README
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python generate_stats.py
+        run: uv run --no-sync python generate_stats.py
 
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add README.md
+          git add README.md .github/data/commit-stats.json
           git diff --staged --quiet || git commit -m "📊 Update profile stats [auto]"
           git push
