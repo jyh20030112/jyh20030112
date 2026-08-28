@@ -1,43 +1,26 @@
-<table style="border-color: transparent;" cellspacing=0>
+<table width="100%" cellspacing="0" cellpadding="0">
 <tr>
-<td valign="center" width="62%">
+<td valign="middle" width="62%">
 
-**Artificial Intelligence**
-
-I build around AI: tools, systems, and experiments that turn vague ideas into usable workflows.
-
-**Tools & Systems**
-
-I care about the moment when intelligence stops being only a chat box and starts becoming something that can plan, call tools, remember context, and help with real work.
-
-**Open Questions**
-
+<strong>Artificial Intelligence</strong><br>
+I build around AI: tools, systems, and experiments that turn vague ideas into usable workflows.<br><br>
+<strong>Tools & Systems</strong><br>
+I care about the moment when intelligence stops being only a chat box and starts becoming something that can plan, call tools, remember context, and help with real work.<br><br>
+<strong>Open Questions</strong><br>
 How should humans collaborate with AI when the answer is not only text, but also an action, a process, or a small system?
 
 </td>
 <td valign="top" width="38%">
-<p align="right">
-
-***
-
-> Human × AI, not Human vs. AI
-
-***
-
-<img width="420" align="center" src="./profile-3d-contrib/profile-night-rainbow.svg" />
-
-***
-
-> Turning ideas into working systems
-
-***
-
+<p align="center">
+<strong>Human × AI, not Human vs. AI</strong><br>
+<img width="340" align="center" src="./profile-3d-contrib/profile-night-rainbow.svg" /><br>
+<em>Turning ideas into working systems</em>
 </p>
 </td>
 </tr>
 </table>
 
-<table style="border-color: transparent;" cellspacing=0>
+<table width="100%" cellspacing="0" cellpadding="0">
 <tr>
 <td valign="top" width="100%">
 
@@ -48,38 +31,47 @@ How should humans collaborate with AI when the answer is not only text, but also
 <!--START_SECTION:profile-stats-->
 Based on **442** public commits authored by [@jyh20030112](https://github.com/jyh20030112):
 
-| Most Active Time | Most Productive Day | Primary Language |
-|:---:|:---:|:---:|
-| 🌆 18–24 | Tuesday / Wednesday | Python |
+<table width="100%" cellspacing="0" cellpadding="0">
+<tr>
+<th align="center">Most Active Time</th>
+<th align="center">Most Productive Day</th>
+<th align="center">Primary Language</th>
+</tr>
+<tr>
+<td align="center">🌆 18–24</td>
+<td align="center">Tuesday / Wednesday</td>
+<td align="center">Python</td>
+</tr>
+</table>
 
-### Time Distribution
+<strong>Time Distribution</strong>
 
 ```text
-🌙 00–08  28 commits  █░░░░░░░░░░░░░░░░░░░░░░░░    6.3 %
-🌞 08–12  63 commits  ███░░░░░░░░░░░░░░░░░░░░░░   14.3 %
-🌤️ 12–18  173 commits █████████░░░░░░░░░░░░░░░░   39.1 %
-🌆 18–24  178 commits ██████████░░░░░░░░░░░░░░░   40.3 %
+🌙 00–08  28 commits  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    6.3 %
+🌞 08–12  63 commits  ███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   14.3 %
+🌤️ 12–18  173 commits ███████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   39.1 %
+🌆 18–24  178 commits ████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   40.3 %
 ```
 
-### Weekday Distribution
+<strong>Weekday Distribution</strong>
 
 ```text
-🐔 Monday     67 commits ███░░░░░░░░░░░░░░░░░░░░░░   15.2 %
-🐱 Tuesday    81 commits ████░░░░░░░░░░░░░░░░░░░░░   18.3 %
-🐶 Wednesday  81 commits ████░░░░░░░░░░░░░░░░░░░░░   18.3 %
-🐮 Thursday   73 commits ████░░░░░░░░░░░░░░░░░░░░░   16.5 %
-🐯 Friday     78 commits ████░░░░░░░░░░░░░░░░░░░░░   17.6 %
-🐰 Saturday   26 commits █░░░░░░░░░░░░░░░░░░░░░░░░    5.9 %
-🐲 Sunday     36 commits ██░░░░░░░░░░░░░░░░░░░░░░░    8.1 %
+🐔 Monday     67 commits ███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   15.2 %
+🐱 Tuesday    81 commits █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   18.3 %
+🐶 Wednesday  81 commits █████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   18.3 %
+🐮 Thursday   73 commits ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   16.5 %
+🐯 Friday     78 commits ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░   17.6 %
+🐰 Saturday   26 commits ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    5.9 %
+🐲 Sunday     36 commits ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    8.1 %
 ```
 
-### Language Distribution
+<strong>Language Distribution</strong>
 
 ```text
-Python      250,801 lines █████████████████████░░░░   85.1 %
-JavaScript  20,960 lines  █░░░░░░░░░░░░░░░░░░░░░░░░    7.1 %
-TypeScript  13,520 lines  █░░░░░░░░░░░░░░░░░░░░░░░░    4.6 %
-Other       9,283 lines   ░░░░░░░░░░░░░░░░░░░░░░░░░    3.2 %
+Python      250,801 lines ██████████████████████████████████████████░░░░░░░░   85.1 %
+JavaScript  20,960 lines  ███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    7.1 %
+TypeScript  13,520 lines  ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    4.6 %
+Other       9,283 lines   █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    3.2 %
 ```
 <!--END_SECTION:profile-stats-->
 
@@ -87,23 +79,19 @@ Other       9,283 lines   ░░░░░░░░░░░░░░░░░░
 </tr>
 </table>
 
-<table style="border-color: transparent;" cellspacing=0>
+<table width="100%" cellspacing="0" cellpadding="0">
 <tr>
 <td valign="top" width="34%">
 
-### Direction
-
-AI as a material for building.
-
+<strong>Direction</strong><br>
+AI as a material for building.<br>
 Not only prompts, not only models, but interfaces, tools, memory, workflows, and the quiet parts that make intelligence useful.
 
 </td>
 <td valign="top" width="33%">
 
-### Experiments
-
-Small systems first.
-
+<strong>Experiments</strong><br>
+Small systems first.<br>
 I like projects that can be touched, run, broken, repaired, and slowly shaped into something clearer.
 
 </td>
@@ -117,7 +105,6 @@ I like projects that can be touched, run, broken, repaired, and slowly shaped in
 
 <details>
 <summary>About the activity stats</summary>
-<br>
 
 Commit counts include all public commits authored by this GitHub account. Language distribution is weighted by additions and deletions in code files changed by those commits; generated files, lockfiles, dependencies, and non-code assets are excluded.
 
