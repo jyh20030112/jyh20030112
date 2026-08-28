@@ -154,7 +154,7 @@ def _pad_visual(value, target_width):
     return str(value) + " " * max(target_width - current, 1)
 
 
-def _make_count_bar(items, total, bar_width=25):
+def _make_count_bar(items, total, bar_width=50):
     label_width = max(_visual_width(label) for label, _ in items) + 2
     value_width = max(len(f"{value:,} commits") for _, value in items) + 1
     lines = []
@@ -173,7 +173,7 @@ def _make_count_bar(items, total, bar_width=25):
     return "```text\n" + "\n".join(lines) + "\n```"
 
 
-def _make_language_bar(items, total, bar_width=25):
+def _make_language_bar(items, total, bar_width=50):
     label_width = max(_visual_width(label) for label, _ in items) + 2
     value_width = max(len(f"{value:,} lines") for _, value in items) + 1
     lines = []
@@ -484,19 +484,28 @@ def render_stats_section(commits, period_counter, weekday_counter, language_coun
 
     return f"""Based on **{total_commits:,}** public commits authored by [@{GITHUB_USERNAME}](https://github.com/{GITHUB_USERNAME}):
 
-| Most Active Time | Most Productive Day | Primary Language |
-|:---:|:---:|:---:|
-| {peak_period} | {peak_weekday} | {primary_language} |
+<table width="100%" cellspacing="0" cellpadding="0">
+<tr>
+<th align="center">Most Active Time</th>
+<th align="center">Most Productive Day</th>
+<th align="center">Primary Language</th>
+</tr>
+<tr>
+<td align="center">{peak_period}</td>
+<td align="center">{peak_weekday}</td>
+<td align="center">{primary_language}</td>
+</tr>
+</table>
 
-### Time Distribution
+<strong>Time Distribution</strong>
 
 {create_time_distribution_chart(period_counter)}
 
-### Weekday Distribution
+<strong>Weekday Distribution</strong>
 
 {create_weekday_chart(weekday_counter)}
 
-### Language Distribution
+<strong>Language Distribution</strong>
 
 {create_language_chart(language_counter)}"""
 
