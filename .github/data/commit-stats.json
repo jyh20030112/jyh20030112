@@ -2,6 +2,9 @@
   "version": 1,
   "username": "jyh20030112",
   "commits": {
+    "00985de8f739ce66f77235ab5e385c3afbeb5c1e": {
+      "Python": 298
+    },
     "0135dffe02bfa4b219b750e2dfeabc9a9eb34c6e": {
       "Python": 2
     },
@@ -13,6 +16,9 @@
     "0205ae25eafe1c3e3e75e239b77524d927648a9f": {
       "Python": 9
     },
+    "02d5a688b6e7e7b4762717f7d6c23930b5acdaf1": {
+      "Python": 60
+    },
     "0420d196893f895c545f05892aa2b6f3d2004a3a": {},
     "043502780773dc6e39f6e911da37aa6eaf0db95e": {
       "Python": 41
@@ -23,6 +29,9 @@
     "05d3435f37a0133ac5a1678d28545ced2ad7b214": {
       "JavaScript": 32,
       "TypeScript": 5
+    },
+    "071bdb7dcaa9678053d03b211a2d5916143b77e3": {
+      "Python": 37
     },
     "074c8ea86f9e5869d58fe93b845ea3911bb1cecf": {},
     "076a9dc4b7dd5bfbfc4240efe3ae617e87159c30": {
@@ -125,6 +134,9 @@
     "17d919511a625b47b937e3a7f1fe6f8cc9751dab": {
       "Python": 228
     },
+    "182e2d35a153cf8a0abb5da6fffefd0894124c34": {
+      "Python": 735
+    },
     "1896132e994d7a3843397407f5b105095015530e": {},
     "189778ad9cb4bcfc118a2242bf7e038c93223bda": {
       "JavaScript": 112,
@@ -137,6 +149,9 @@
     },
     "1a32da0ec96bff4da78e7a215201fdd433bd3953": {
       "Python": 54
+    },
+    "1a5774a0659ddf3cf9ce43d4ddb25d6f42d7ba53": {
+      "Python": 1045
     },
     "1ad3b8120f65fdf060a459b117c56b478709c57c": {
       "Python": 622
@@ -190,6 +205,9 @@
     "237b0ddca94c96bd8487f56ae15d4904b91e2acc": {
       "Python": 2
     },
+    "23a2c0869029e65be3b09eb1be7202092e084d3d": {
+      "Python": 2
+    },
     "2478e610493499849bc45cd1ca36da8139c777d4": {
       "Python": 18
     },
@@ -198,6 +216,10 @@
     },
     "25dff7a23eef949de7081c4b4b2d047d82b0be98": {
       "Python": 372
+    },
+    "2781d9f8a84c879460fd4d709b5363313683106f": {
+      "TypeScript": 2,
+      "Python": 4122
     },
     "28a2226aaf29bf7ae45f2337c5e979237004a2b6": {
       "Python": 22
@@ -208,6 +230,9 @@
     },
     "29f63180074327090cc628737436f70727c751dc": {
       "Python": 501
+    },
+    "2b02c622acdc3ab615b37397248616f69015c8ad": {
+      "TypeScript": 712
     },
     "2b1d31e54ba1e0e755f878df0321623916ea531e": {
       "Python": 211
@@ -300,6 +325,9 @@
     },
     "3cd8265381a94c9d46ba879a89ebde931fbf00e9": {},
     "3cf8d347f49f6db51fb7f8de4822d47dfbef0bd9": {},
+    "3e9b20cef23fce4c4ccc3170a0ad33690f2ce536": {
+      "TypeScript": 1577
+    },
     "3f0df9dc6a3e2c703f389f746fde488680418262": {
       "Python": 567
     },
@@ -308,11 +336,15 @@
       "Shell": 4
     },
     "4002cdfaecb218bd803a5865e8703e0c2e7d03bb": {},
+    "40185831c5d2068aa850fc1533456b212fcf11b4": {
+      "TypeScript": 297
+    },
     "40a15f429164f502638a38c8de4462f15dfe28b3": {},
     "40fee12fde328521dd7c8e322f80da7014acfe00": {
       "Python": 4
     },
     "4100e70d84b07ff37d30c7655c67a800bd07a393": {},
+    "4153b14e6da86615c90a95984417055d995d23ea": {},
     "424301939cbeb69b3dc85c81774138fe4f2e3322": {},
     "42975e5c992fbe531277154c4542cfcb1ea2592d": {
       "Python": 973
@@ -329,6 +361,9 @@
     },
     "44e0010452b3aa79eddb0cd3708521d79e5d4125": {
       "Python": 656
+    },
+    "45881d2addf1ae426669a7d472360d62bae73374": {
+      "Python": 468
     },
     "45e6ec87be98eebed07a5dde7052a1646121cf49": {
       "JavaScript": 1004,
@@ -351,6 +386,12 @@
     "49788b8b9b7189c7ab8e95a7e05ece3952f0fbc0": {
       "Python": 13
     },
+    "49a87c6f926fd37789199372cc1d2da142a3c870": {
+      "TypeScript": 142
+    },
+    "49e0d166654191f9816348ca415f1be1a2ae6ae4": {
+      "Python": 2152
+    },
     "4a587871d6c4f51a911031f3041b2ef53c1b1beb": {
       "Python": 7965,
       "JavaScript": 1062,
@@ -368,6 +409,11 @@
     },
     "4be599cd8892196e1ccfb52a71aadd0dbbd9bb26": {
       "Python": 556
+    },
+    "4c2dc95016afcf86b18fbb1c1ed83ee916fb91db": {
+      "JavaScript": 169,
+      "TypeScript": 162,
+      "Python": 178
     },
     "4c8bb29f862ecd66ee0e0fd55d34b1418a4fc891": {
       "Python": 93
@@ -409,6 +455,9 @@
       "Python": 233
     },
     "553f584d668d671cbb5066290b5faa4ead3e2173": {},
+    "5540c384fd08658ac3474b00ddd89b171df0b4eb": {
+      "TypeScript": 26
+    },
     "5556a0f840e1a0614cd5abb5b293d74d7d024b64": {
       "Python": 601
     },
@@ -462,6 +511,9 @@
     "5d1fe34eacd4b0e7c1a4159bc74c69df96dd3162": {
       "Python": 267
     },
+    "5d36d0d2549af8bd98d6f4ff1e1557c99452d7cd": {
+      "TypeScript": 50
+    },
     "5d3b0df2d22850c7aea435aa8bfb83e9a65ae3d0": {
       "Python": 30
     },
@@ -489,6 +541,7 @@
     "616f551ae0b084c90851723ee434c09f38c99955": {
       "Python": 16
     },
+    "61c5e3a58d59ea901d42ec2c3682af2956d3d00c": {},
     "61ffa216e58cee3f12a82924afc0982bcd6e7310": {},
     "63245ae0604a4c07d2e91fbffb635efef833a56f": {
       "Python": 162
@@ -644,6 +697,9 @@
     "828b1457e3177b1c0191cbdcd1e8b2fa41a45c27": {
       "Python": 3160
     },
+    "828c5342e58dacc27e2975b4924208b7529e563b": {
+      "TypeScript": 60
+    },
     "82900d1da23fd230e3cad4a962b95a834a916494": {
       "Python": 55
     },
@@ -662,6 +718,7 @@
     "8475d513f53b4333db9375aa4f6ae64bab117e5b": {
       "Python": 820
     },
+    "84763ecf783dd2ce754e0eec6d8a400fba72169f": {},
     "8486bddc85c06285471a3f9425a920f3371d0feb": {
       "Python": 921
     },
@@ -677,6 +734,9 @@
     },
     "865b96c493d1a0bcd50e6a3c24969f38a0553a5c": {
       "Python": 17
+    },
+    "866f631ecd6e823d67c50e25cf43669b31277f60": {
+      "TypeScript": 95
     },
     "8686664c40387ce5935f618d42090f4d945cee69": {},
     "87aafef73b0cc5b591d0628bb5ae1049dcf16639": {},
@@ -770,6 +830,9 @@
     "941ccf8a5e1c1ea1db3fd0e1a8bf1ad11f7d402d": {
       "Python": 174
     },
+    "94238e16fb1307e6c1af63a68c033ef52088ddad": {
+      "Python": 234
+    },
     "942c714f48e67738f3bcfb807fa49a26201dd43b": {
       "Python": 180
     },
@@ -826,6 +889,9 @@
     "a07691ecf267e01401547ec84041f578a23bf902": {
       "Python": 204
     },
+    "a0920001105264b2a2eced80504d9f083fad4ac3": {
+      "Python": 229
+    },
     "a22283d34d17784db38fb0dca9b1c58eaa98da86": {
       "Python": 262
     },
@@ -852,6 +918,9 @@
       "JavaScript": 6,
       "TypeScript": 9
     },
+    "a5477947ae633ca8509947912ad8b2d2ccb7cd28": {
+      "Python": 42
+    },
     "a5db65a78d2c3049959012adb7285fe1d1bfef41": {},
     "a6043500011e5d36f1560fc8f9d814238a6ef9fe": {
       "Python": 18
@@ -863,6 +932,9 @@
     },
     "a8292b0a51ab518e8ee388cf68e797dd1ecfaf0e": {
       "Python": 2
+    },
+    "a86926e9e6099aca4cd88a09ebc57609ba008635": {
+      "TypeScript": 767
     },
     "a89b5b6fc821349fbe85d43cabf11ac48fc16c00": {},
     "a92a1bb2032dcdc1cfef104954682e8763a88ecc": {
@@ -906,12 +978,22 @@
     },
     "ae16ea1a49101cd2249b3724b6461049a87814ac": {},
     "ae748cb03f10130f635253ab38b5fbbde7fde5f1": {},
+    "aede048c48dbeb549a84b872a6817e7980d73c59": {
+      "HTML": 2,
+      "TypeScript": 2426,
+      "CSS": 30,
+      "Python": 2847
+    },
     "af901ffc76a6d58e8a4ad8a027a78b3fad4db4a9": {
       "Python": 607
     },
     "aff29716b732d05f0d65c46b7d52b6b63bba9f7a": {},
     "b094adf832f64f2d0c656bc5b0e9743d2afa5ed2": {
       "Python": 9
+    },
+    "b1ac02680b8e067664e1d32a9287edfe91cc01f7": {
+      "JavaScript": 21,
+      "Python": 536
     },
     "b28c08c38e4feb8bb4770a9df974403a5040f7e4": {
       "Python": 34
@@ -934,6 +1016,9 @@
     },
     "b8441ef979ae49f42905aeb7ffd01f9c3ca9beb5": {},
     "b8dbd8ffe26ad64a8688c837893167891ca22d28": {},
+    "badcf4eb39a7d7f3098b9289c953b4fd8f5b9405": {
+      "TypeScript": 22
+    },
     "bb748f0550347ab8dd4b898025beb939892a0bf3": {},
     "bc9298f77e8bb7da23f713364b67afceeed5c8e4": {
       "Python": 1144
@@ -947,6 +1032,10 @@
     },
     "bd80cc81cc27a01b3570fffcd48859117c6e1854": {
       "Python": 30
+    },
+    "be2b8c5884f2104ddedca11057887a1c30b29cb7": {
+      "TypeScript": 4,
+      "Python": 6
     },
     "bf6a6761c09b1c57f90c27a2bcc7a1c85c1b90d7": {
       "Python": 713
@@ -1068,6 +1157,12 @@
     "d90f8c8e57d8395c65f9d78677b845c623685a26": {
       "Python": 12
     },
+    "d9e14e3526bff3776ef3aebc0ad9a2547745ec1e": {
+      "JavaScript": 116,
+      "Rust": 551,
+      "TypeScript": 453,
+      "Python": 1053
+    },
     "da09e60ff7c0c4a86de74bc92f2cc434251dc0a7": {},
     "daaeab8dce5405218e27ac9c47da7771b157aa0e": {
       "Python": 655
@@ -1094,6 +1189,9 @@
       "Rust": 1156
     },
     "ddddb354ff721eb572dbadeeea2730bf62a52105": {},
+    "ddf3700f0fd1ac40520d6d0e9bf51aeb62d0e1ff": {
+      "TypeScript": 1530
+    },
     "de9fa0ef722b3ca8b469ec2ff088c0a29161808d": {
       "Python": 289
     },
@@ -1138,6 +1236,7 @@
     "e62e99ccd2e5091f0fdb08180c2c8023d7c850da": {
       "Python": 410
     },
+    "e7987ba994b1b383aefaafa09654f94c88bdcdf9": {},
     "e7dec7c3bbbb127faf753499bd6d624282fc9d1a": {
       "Python": 96
     },
@@ -1208,6 +1307,10 @@
     "f4701e212e7c35f5859d0cbbdb142371bab6177e": {},
     "f4a88a9f68dc7d1732a4467c4a3679cf0e3e6390": {
       "Python": 20
+    },
+    "f51f67f4361013c089ccfab4da3920d5ddb1547b": {
+      "Python": 4075,
+      "JavaScript": 326
     },
     "f584333e3cac269b865f2c4dc991bdcf47550352": {
       "Python": 997
