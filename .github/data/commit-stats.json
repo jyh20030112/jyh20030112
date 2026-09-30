@@ -927,6 +927,11 @@
     "a2afe1a4504c67816bd3856fb70f0f899bfef469": {
       "Python": 255
     },
+    "a2e9965153552caf2f22e8ea6568082e39552db2": {
+      "JavaScript": 2730,
+      "TypeScript": 234,
+      "Shell": 19
+    },
     "a2ed5fbea51dbbdba7c6a9359b95f7651b5ff6c6": {
       "Python": 8
     },
@@ -1181,6 +1186,10 @@
     },
     "d1c700962ec7e419809ae4db9543e003f8b371b6": {
       "Python": 315
+    },
+    "d1ceb74065117f83450a7eb7e4bff486abf824ec": {
+      "JavaScript": 10,
+      "TypeScript": 10
     },
     "d29866fc03d7dbbc0abd24691e3928c35440962d": {
       "JavaScript": 61,
