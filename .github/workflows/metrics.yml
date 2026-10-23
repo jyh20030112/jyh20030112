@@ -17,6 +17,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Generate metrics
         uses: lowlighter/metrics@latest
         with:
@@ -24,6 +27,13 @@ jobs:
           token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           base: header, activity, community, repositories, metadata
           config_timezone: Asia/Shanghai
-          output_action: commit
-          committer_branch: main
-          committer_message: Generate GitHub metrics
+          output_action: none
+
+      - name: Commit generated metrics
+        run: |
+          git config --local user.email "126380366+jyh20030112@users.noreply.github.com"
+          git config --local user.name "jyh20030112"
+          sudo cp /metrics_renders/github-metrics.svg ./github-metrics.svg
+          git add github-metrics.svg
+          git diff --staged --quiet || git commit -m "Generate GitHub metrics"
+          git push
