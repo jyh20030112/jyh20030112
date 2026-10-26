@@ -5,7 +5,7 @@ import os
 import pathlib
 import time
 from collections import Counter
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -19,6 +19,9 @@ CACHE_PATH = pathlib.Path(".github/data/commit-stats.json")
 CACHE_VERSION = 1
 SEARCH_PAGE_SIZE = 100
 MAX_SEARCH_RESULTS = 1_000
+AUTHENTICATED_SEARCH_DELAY = 2.1
+UNAUTHENTICATED_SEARCH_DELAY = 6.1
+MAX_RATE_LIMIT_WAIT = 300
 DETAIL_WORKERS = 2
 START_MARKER = "<!--START_SECTION:profile-stats-->"
 END_MARKER = "<!--END_SECTION:profile-stats-->"
@@ -192,8 +195,25 @@ def _make_language_bar(items, total, bar_width=50):
     return "```text\n" + "\n".join(lines) + "\n```"
 
 
+def _rate_limit_delay(response, attempt):
+    delays = []
+    retry_after = response.headers.get("Retry-After", "")
+    if retry_after.isdigit():
+        delays.append(int(retry_after))
+    reset = response.headers.get("X-RateLimit-Reset", "")
+    if response.headers.get("X-RateLimit-Remaining") == "0" and reset.isdigit():
+        delays.append(max(int(reset) - time.time(), 0) + 1)
+    return max(delays) if delays else attempt * 60
+
+
 def _request_json(client, url, params=None, retries=6, allow_not_found=False):
     for attempt in range(1, retries + 1):
+        if httpx.URL(url).path.startswith("/search/"):
+            time.sleep(
+                AUTHENTICATED_SEARCH_DELAY
+                if client.headers.get("Authorization")
+                else UNAUTHENTICATED_SEARCH_DELAY
+            )
         try:
             response = client.get(url, params=params)
         except httpx.HTTPError as error:
@@ -208,21 +228,24 @@ def _request_json(client, url, params=None, retries=6, allow_not_found=False):
             return response.json()
 
         if response.status_code in {403, 429}:
-            remaining = response.headers.get("X-RateLimit-Remaining")
-            if remaining == "0":
-                reset = response.headers.get("X-RateLimit-Reset", "unknown")
-                raise RuntimeError(f"GitHub API rate limit exhausted; reset at {reset}")
-            if attempt < retries:
-                retry_after = response.headers.get("Retry-After")
-                delay = (
-                    int(retry_after)
-                    if retry_after and retry_after.isdigit()
-                    else attempt * 10
-                )
+            rate_limited = (
+                response.status_code == 429
+                or response.headers.get("X-RateLimit-Remaining") == "0"
+                or "Retry-After" in response.headers
+                or "rate limit" in response.text.lower()
+            )
+            if rate_limited and attempt < retries:
+                delay = _rate_limit_delay(response, attempt)
+                if delay > MAX_RATE_LIMIT_WAIT:
+                    raise RuntimeError(
+                        f"GitHub requires a {delay:.0f}-second rate-limit wait, "
+                        f"which exceeds the {MAX_RATE_LIMIT_WAIT}-second retry budget"
+                    )
                 print(
-                    f"GitHub asked us to slow down; retrying in {min(delay, 30)} seconds..."
+                    f"GitHub asked us to slow down; retrying in {delay:.1f} seconds...",
+                    flush=True,
                 )
-                time.sleep(min(delay, 30))
+                time.sleep(delay)
                 continue
 
         if response.status_code >= 500 and attempt < retries:
@@ -238,22 +261,41 @@ def _request_json(client, url, params=None, retries=6, allow_not_found=False):
 
 
 def _search_query(start_date, end_date):
+    if start_date is None:
+        return f"author:{GITHUB_USERNAME} author-date:<={end_date.isoformat()}"
     return (
         f"author:{GITHUB_USERNAME} "
         f"author-date:{start_date.isoformat()}..{end_date.isoformat()}"
     )
 
 
-def _search_commit_range(client, start_date, end_date):
-    probe = _request_json(
-        client,
-        f"{GITHUB_API_URL}/search/commits",
-        params={"q": _search_query(start_date, end_date), "per_page": 1},
-    )
-    if probe.get("incomplete_results"):
-        raise RuntimeError("GitHub returned incomplete commit search results")
+def _request_search_page(client, params, retries=3):
+    for attempt in range(1, retries + 1):
+        data = _request_json(client, f"{GITHUB_API_URL}/search/commits", params=params)
+        if not data.get("incomplete_results"):
+            return data
+        if attempt < retries:
+            print("GitHub returned incomplete search results; retrying...", flush=True)
+            time.sleep(attempt * 5)
+    raise RuntimeError("GitHub returned incomplete commit search results after retries")
 
-    total = int(probe.get("total_count", 0))
+
+def _search_commit_range(client, start_date, end_date):
+    params = {
+        "q": _search_query(start_date, end_date),
+        "sort": "author-date",
+        "order": "asc",
+        "per_page": SEARCH_PAGE_SIZE,
+        "page": 1,
+    }
+    first_page = _request_search_page(client, params)
+    total = int(first_page.get("total_count", 0))
+    if total > MAX_SEARCH_RESULTS and start_date is None:
+        items = first_page.get("items", [])
+        if not items:
+            raise RuntimeError("GitHub reported commits but returned no oldest commit")
+        oldest = items[0]["commit"]["author"]["date"]
+        start_date = datetime.fromisoformat(oldest).astimezone(UTC).date()
     if total > MAX_SEARCH_RESULTS and start_date < end_date:
         midpoint = start_date + (end_date - start_date) // 2
         left = _search_commit_range(client, start_date, midpoint)
@@ -266,31 +308,17 @@ def _search_commit_range(client, start_date, end_date):
             "the search range cannot be divided further"
         )
 
-    commits = []
+    commits = list(first_page.get("items", []))
     pages = math.ceil(total / SEARCH_PAGE_SIZE)
-    for page in range(1, pages + 1):
-        page_data = _request_json(
-            client,
-            f"{GITHUB_API_URL}/search/commits",
-            params={
-                "q": _search_query(start_date, end_date),
-                "sort": "author-date",
-                "order": "desc",
-                "per_page": SEARCH_PAGE_SIZE,
-                "page": page,
-            },
-        )
-        if page_data.get("incomplete_results"):
-            raise RuntimeError("GitHub returned incomplete commit search results")
+    for page in range(2, pages + 1):
+        page_data = _request_search_page(client, {**params, "page": page})
         commits.extend(page_data.get("items", []))
-        if page < pages:
-            time.sleep(2)
 
     return commits
 
 
 def fetch_all_public_commits(client):
-    commits = _search_commit_range(client, date(1970, 1, 1), datetime.now(UTC).date())
+    commits = _search_commit_range(client, None, datetime.now(UTC).date())
     unique_commits = {}
 
     for item in commits:

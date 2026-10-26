@@ -9,6 +9,10 @@ on:
       - main
     paths:
       - "generate_stats.py"
+      - "tests/**"
+      - ".github/workflows/update-stats.yml"
+      - "pyproject.toml"
+      - "uv.lock"
 
 concurrency:
   group: profile-readme-writer
@@ -39,10 +43,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --no-dev
 
+      - name: Run tests
+        run: uv run --no-sync python -m unittest discover -s tests -v
+
       - name: Generate stats and update README
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uv run --no-sync python generate_stats.py
+        run: uv run --no-sync python -u generate_stats.py
 
       - name: Commit and push changes
         run: |
